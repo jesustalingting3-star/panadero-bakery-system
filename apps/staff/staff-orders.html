@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANADERO | Staff Orders & Reservations</title>
+    <link rel="stylesheet" href="assets/css/staff.css">
+</head>
+<body class="staff-body" data-staff-page="orders">
+    <div id="staff-shell"></div>
+
+    <template id="staff-page-content">
+        <header class="staff-page-heading">
+            <div>
+                <h1>Orders &amp; Reservations</h1>
+            </div>
+        </header>
+
+        <section class="staff-panel">
+            <div class="staff-panel-header">
+                <div>
+                    <h2>Customer Requests</h2>
+                </div>
+            </div>
+            <div class="staff-panel-body">
+                <div class="staff-toolbar">
+                    <input class="staff-field" id="record-search" type="search" placeholder="Search reference, customer, or product..." autocomplete="off" aria-label="Search customer requests">
+                    <select class="staff-field" id="record-type" aria-label="Filter request type">
+                        <option value="all">Orders &amp; Reservations</option>
+                        <option value="order">Orders Only</option>
+                        <option value="reservation">Reservations Only</option>
+                    </select>
+                    <select class="staff-field" id="record-status" aria-label="Filter status">
+                        <option value="all">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="preparing">Preparing</option>
+                        <option value="ready">Ready</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+
+                <div class="staff-table-wrap">
+                    <table class="staff-table">
+                        <thead>
+                            <tr>
+                                <th>Reference</th>
+                                <th>Customer</th>
+                                <th>Products</th>
+                                <th>Schedule</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Update</th>
+                            </tr>
+                        </thead>
+                        <tbody id="records-table"></tbody>
+                    </table>
+                    <p class="staff-empty" id="records-empty" role="status" hidden></p>
+                </div>
+                <p class="staff-message" id="records-message" role="status"></p>
+            </div>
+        </section>
+    </template>
+
+    <script src="assets/js/products.js"></script>
+    <script src="assets/js/staff-data.js"></script>
+    <script src="assets/js/staff-shell.js"></script>
+    <script src="assets/js/staff-orders.js"></script>
+</body>
+</html>

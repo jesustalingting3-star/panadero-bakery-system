@@ -1,0 +1,26 @@
+# Dependencies and generated builds
+node_modules/
+dist/
+build/
+
+# Environment files; keep real credentials out of the repository
+.env*
+!.env.example
+
+# Source archives and logs
+*.zip
+*.log
+logs/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.iml
+.project
+.classpath
+.settings/

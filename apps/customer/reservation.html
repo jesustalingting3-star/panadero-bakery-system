@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANADERO | Place Reservation</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/checkout.css">
+</head>
+<body data-page="">
+<div id="site-header"></div>
+
+<main class="page-shell">
+    <h1 class="page-title">Place Reservation</h1>
+    <p class="page-subtitle">Review the item you want to reserve and provide your reservation details.</p>
+
+    <section id="reservation-empty" class="empty-state checkout-empty" hidden>
+        <h2>Reservation item unavailable.</h2>
+        <p>Please choose a product from the menu before making a reservation.</p>
+        <a href="menu.html" class="button" style="margin-top:18px">Browse Menu</a>
+    </section>
+
+    <div id="reservation-layout" class="checkout-layout" hidden>
+        <form id="reservation-form" class="checkout-form">
+            <section class="checkout-section">
+                <h2>Customer Information</h2>
+                <div class="form-stack">
+                    <div class="field-row">
+                        <div class="form-group">
+                            <label for="firstName">First Name</label>
+                            <input class="field" id="firstName" name="firstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">Last Name</label>
+                            <input class="field" id="lastName" name="lastName" required>
+                        </div>
+                    </div>
+                    <div class="field-row">
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input class="field" id="email" name="email" type="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="mobile">Mobile Number</label>
+                            <input class="field" id="mobile" name="mobile" type="tel">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="checkout-section">
+                <h2>Reservation Schedule</h2>
+                <div class="field-row">
+                    <div class="form-group">
+                        <label for="date">Preferred Date</label>
+                        <input class="field" id="date" name="date" type="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="time">Preferred Time</label>
+                        <input class="field" id="time" name="time" type="time" required>
+                    </div>
+                </div>
+            </section>
+
+            <p id="reservation-message" class="status-message" role="status"></p>
+            <button class="button reservation-button" type="submit" style="margin-top:20px">Submit Reservation Request</button>
+        </form>
+
+        <aside class="checkout-summary">
+            <h2>Reservation Summary</h2>
+            <div id="reservation-summary-items" class="summary-items"></div>
+            <div class="summary-row total">
+                <span>Total</span>
+                <strong id="reservation-subtotal">₱0.00</strong>
+            </div>
+            <p class="cart-note">This prepares a reservation request only. A real backend must accept it before the reservation is confirmed.</p>
+        </aside>
+    </div>
+</main>
+
+<div id="site-footer"></div>
+<script src="assets/js/products.js" defer></script>
+<script src="assets/js/product-service.js" defer></script>
+<script src="assets/js/auth-service.js" defer></script>
+<script src="assets/js/navigation.js" defer></script>
+<script src="assets/js/cart.js" defer></script>
+<script src="assets/js/reservation-service.js" defer></script>
+<script src="assets/js/reservation.js" defer></script>
+</body>
+</html>
