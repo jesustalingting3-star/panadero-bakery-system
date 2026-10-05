@@ -168,8 +168,15 @@
             const reference = result.order?.orderNumber || result.order?.order_number || result.order?.reference || '';
             message.className = 'status-message success';
             message.textContent = reference
-                ? `Order accepted. Reference: ${reference}`
-                : (result.message || 'Order accepted.');
+                ? `Order placed successfully. Reference: ${reference}.`
+                : (result.message || 'Order placed successfully.');
+            if (reference) {
+                const trackLink = document.createElement('a');
+                trackLink.href = 'track-order.html';
+                trackLink.textContent = ' View My Orders';
+                message.appendChild(trackLink);
+            }
+            if (submitButton) { submitButton.disabled = true; submitButton.textContent = 'Order Placed'; }
 
             if (!directCheckout) CartService.clearCart();
         } catch (error) {

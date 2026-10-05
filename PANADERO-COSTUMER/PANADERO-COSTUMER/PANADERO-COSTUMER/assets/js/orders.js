@@ -46,7 +46,10 @@
                 const reference = getReference(record, type);
                 const date = record.createdAt || record.created_at || '';
                 const dateText = date ? new Date(date).toLocaleString() : '';
-                card.innerHTML = `<div class="record-top"><div><strong>${type === 'order' ? 'Order' : 'Reservation'}${reference ? ' ' + reference : ''}</strong><p class="record-meta">${dateText}</p></div><span class="record-status">${record.status || ''}</span></div>`;
+                const statusLabels = { pending: 'Received', processing: 'Processing', ready: 'Ready for Pickup', completed: 'Completed', cancelled: 'Cancelled' };
+                const statusLabel = statusLabels[String(record.status || '').toLowerCase()] || record.status || 'Received';
+                const statusNote = statusLabel === 'Received' ? 'Order received. Staff will update it when preparation begins.' : '';
+                card.innerHTML = `<div class="record-top"><div><strong>${type === 'order' ? 'Order' : 'Reservation'}${reference ? ' ' + reference : ''}</strong><p class="record-meta">${dateText}</p>${statusNote ? `<p class="record-meta">${statusNote}</p>` : ''}</div><span class="record-status">${statusLabel}</span></div>`;
                 list.appendChild(card);
             }
             empty.hidden = shown.length > 0;

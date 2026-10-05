@@ -109,6 +109,8 @@
     if (year) year.textContent = new Date().getFullYear();
 
     window.addEventListener('panadero-auth-changed', setupHeader);
+    window.addEventListener('pageshow', setupHeader);
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') setupHeader(); });
 
     document.addEventListener('click', function (event) {
         const wrap = event.target.closest('.profile-menu-wrap');

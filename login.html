@@ -25,6 +25,15 @@
   </main>
   <script>
     const API = '/api';
+    (function redirectExistingSession() {
+      try {
+        const user = JSON.parse(localStorage.getItem('panadero-auth-session-v2') || 'null');
+        const token = localStorage.getItem('panadero-api-token');
+        if (!user || !token) return;
+        const destination = user.role === 'admin' ? '/admin/admin.html' : user.role === 'staff' ? '/staff/staff-dashboard.html' : '/customer/index.html';
+        location.replace(destination);
+      } catch (_) {}
+    })();
     const form = document.getElementById('login-form');
     const message = document.getElementById('message');
     form.addEventListener('submit', async event => {
@@ -37,7 +46,7 @@
         localStorage.setItem('panadero-auth-session-v2', JSON.stringify(result.user));
         localStorage.setItem('panadero-api-token', result.token);
         const destination = result.user.role === 'admin' ? '/admin/admin.html' : result.user.role === 'staff' ? '/staff/staff-dashboard.html' : '/customer/index.html';
-        location.assign(destination);
+        location.replace(destination);
       } catch (_) { message.textContent = 'The bakery server is unavailable.'; }
     });
   </script>

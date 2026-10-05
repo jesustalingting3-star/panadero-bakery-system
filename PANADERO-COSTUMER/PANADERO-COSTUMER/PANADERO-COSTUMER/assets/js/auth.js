@@ -25,7 +25,7 @@
                 loginMessage.textContent = "Logged in as " + result.user.displayName + ".";
 
                 window.setTimeout(function () {
-                    window.location.href = "index.html";
+                    window.location.replace("index.html");
                 }, 450);
                 return;
             }
