@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANADERO | Order Checkout</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/checkout.css">
+</head>
+<body data-page="">
+<div id="site-header"></div>
+
+<main class="page-shell">
+    <h1 class="page-title">Order Checkout</h1>
+    <p class="page-subtitle">Review your order and provide your pickup or delivery details.</p>
+
+    <section id="checkout-empty" class="empty-state checkout-empty" hidden>
+        <h2>Your cart is empty.</h2>
+        <p>Add products before continuing to checkout.</p>
+        <a href="menu.html" class="button" style="margin-top:18px">Browse Menu</a>
+    </section>
+
+    <div id="checkout-layout" class="checkout-layout" hidden>
+        <form id="checkout-form" class="checkout-form">
+            <section class="checkout-section">
+                <h2>Customer Information</h2>
+                <div class="form-stack">
+                    <div class="field-row">
+                        <div class="form-group">
+                            <label for="firstName">First Name</label>
+                            <input class="field" id="firstName" name="firstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">Last Name</label>
+                            <input class="field" id="lastName" name="lastName" required>
+                        </div>
+                    </div>
+                    <div class="field-row">
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input class="field" id="email" name="email" type="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="mobile">Mobile Number</label>
+                            <input class="field" id="mobile" name="mobile" type="tel">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="checkout-section">
+                <h2>Fulfillment</h2>
+                <div class="choice-grid">
+                    <label class="choice">
+                        <input type="radio" name="deliveryMethod" value="pickup" checked>
+                        <span><strong>Pickup</strong></span>
+                    </label>
+                    <label class="choice">
+                        <input type="radio" name="deliveryMethod" value="delivery">
+                        <span><strong>Delivery</strong></span>
+                    </label>
+                </div>
+
+                <div class="field-row" style="margin-top:16px">
+                    <div class="form-group">
+                        <label for="date">Preferred Date</label>
+                        <input class="field" id="date" name="date" type="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="time">Preferred Time</label>
+                        <input class="field" id="time" name="time" type="time" required>
+                    </div>
+                </div>
+
+                <div id="delivery-address-wrap" class="form-group" style="margin-top:16px" hidden>
+                    <label for="delivery-address">Delivery Address</label>
+                    <textarea class="field" id="delivery-address" name="deliveryAddress" rows="3"></textarea>
+                </div>
+            </section>
+
+            <p id="checkout-message" class="status-message" role="status"></p>
+            <button class="button" type="submit" style="margin-top:20px">Submit Order for Processing</button>
+        </form>
+
+        <aside class="checkout-summary">
+            <h2>Order Summary</h2>
+            <div id="checkout-summary-items" class="summary-items"></div>
+            <div class="summary-row total">
+                <span>Total</span>
+                <strong id="checkout-subtotal">₱0.00</strong>
+            </div>
+            <p class="cart-note">No payment is processed on this prototype. A real backend/payment integration is required before an order can be accepted.</p>
+        </aside>
+    </div>
+</main>
+
+<div id="site-footer"></div>
+<script>window.PANADERO_API="/api";</script>
+<script src="assets/js/products.js" defer></script>
+<script src="assets/js/product-service.js" defer></script>
+<script src="assets/js/auth-service.js" defer></script>
+<script src="assets/js/navigation.js" defer></script>
+<script src="assets/js/cart.js" defer></script>
+<script src="assets/js/order-service.js" defer></script>
+<script src="assets/js/checkout.js" defer></script>
+</body>
+</html>
