@@ -1,6 +1,6 @@
 (function () {
     const data = window.PANADERO_DATA || { products: [], categories: [], fallbackImage: '' };
-    const categorySlug = value => String(value || '').toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const categorySlug = value => { const slug = String(value || '').toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); return ({ breads: 'bread', cakes: 'cake', doughnuts: 'doughnut', pies: 'pie' }[slug] || slug); };
     const byId = id => data.products.find(product => String(product.id) === String(id)) || null;
     const bySlug = slug => data.products.find(product => product.slug === String(slug)) || null;
     const getProducts = () => data.products.filter(product => product.available !== false).map(product => ({ ...product }));
