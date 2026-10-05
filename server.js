@@ -18,6 +18,11 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'panadero_bakery', waitForConnections: true,
   connectionLimit: 10, decimalNumbers: true
 });
+const databaseReady = migrate();
+app.use(async (_req, res, next) => {
+  try { await databaseReady; next(); }
+  catch (error) { console.error('Database initialization failed:', error.message); fail(res, 503, 'Database connection failed.', 'DB_UNAVAILABLE'); }
+});
 const sessions = new Map();
 const ok = (res, data = {}) => res.json({ ok: true, ...data });
 const fail = (res, status, message, code = 'ERROR') => res.status(status).json({ ok: false, code, message });
@@ -72,5 +77,8 @@ app.use('/customer', express.static(customerRoot));
 app.use('/staff', express.static(path.join(__dirname, 'PANADERO-STAFF/PANADERO-STAFF')));
 app.use('/admin', express.static(path.join(__dirname, 'PANADERO-ADMIN/Panadero-Admin/admin')));
 app.get('/', (_req,res) => res.redirect('/customer/index.html'));
-const port = Number(process.env.PORT || 3000);
-migrate().then(() => app.listen(port, '0.0.0.0', () => console.log(`Panadero server listening on ${port}`))).catch(e => { console.error('Database migration failed:', e.message); process.exit(1); });
+export default app;
+if (!process.env.VERCEL) {
+  const port = Number(process.env.PORT || 3000);
+  databaseReady.then(() => app.listen(port, '0.0.0.0', () => console.log(`Panadero server listening on ${port}`))).catch(e => { console.error('Database migration failed:', e.message); process.exit(1); });
+}
