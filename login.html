@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PANADERO | Sign In</title>
+  <style>
+    :root{font-family:Arial,sans-serif;color:#523622;background:#f7efe3}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px}.card{width:min(430px,100%);background:#fffaf3;border:1px solid #ead8c2;border-radius:18px;padding:34px;box-shadow:0 14px 40px #52362218}h1{margin:0 0 8px;letter-spacing:.08em}p{color:#75604e}.field{width:100%;padding:13px 14px;margin:7px 0 14px;border:1px solid #d8c3aa;border-radius:8px;font-size:1rem}.button{width:100%;padding:13px;border:0;border-radius:8px;background:#b87832;color:#fff;font-weight:700;font-size:1rem;cursor:pointer}.message{min-height:24px;margin:14px 0;color:#9a3d27}.hint{font-size:.88rem;line-height:1.5}.hint code{background:#f1e5d6;padding:2px 5px;border-radius:4px}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>PANADERO</h1>
+    <p>Sign in to open the correct bakery portal.</p>
+    <form id="login-form">
+      <label for="email">Email</label>
+      <input class="field" id="email" name="email" type="email" autocomplete="email" required>
+      <label for="password">Password</label>
+      <input class="field" id="password" name="password" type="password" autocomplete="current-password" required>
+      <p id="message" class="message" role="status"></p>
+      <button class="button" type="submit">Sign In</button>
+    </form>
+    <p><a href="/customer/login.html">Create a customer account</a></p>
+    <p class="hint">Customer accounts can be created from the customer login page. Demo staff: <code>staff@panadero.local</code> / <code>Staff123!</code>. Demo admin: <code>admin@panadero.local</code> / <code>Admin123!</code>.</p>
+  </main>
+  <script>
+    const API = '/api';
+    const form = document.getElementById('login-form');
+    const message = document.getElementById('message');
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      message.textContent = 'Signing in…';
+      try {
+        const response = await fetch(API + '/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:form.email.value.trim(),password:form.password.value}) });
+        const result = await response.json();
+        if (!result.ok) { message.textContent = result.message || 'Unable to sign in.'; return; }
+        localStorage.setItem('panadero-auth-session-v2', JSON.stringify(result.user));
+        localStorage.setItem('panadero-api-token', result.token);
+        const destination = result.user.role === 'admin' ? '/admin/admin.html' : result.user.role === 'staff' ? '/staff/staff-dashboard.html' : '/customer/index.html';
+        location.assign(destination);
+      } catch (_) { message.textContent = 'The bakery server is unavailable.'; }
+    });
+  </script>
+</body>
+</html>

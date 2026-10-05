@@ -125,6 +125,7 @@
             }
         }
 
+        if (!currentUser) { message.className = 'status-message info'; message.textContent = 'Please sign in before placing an order.'; setTimeout(() => location.assign('/login.html'), 700); return; }
         if (submitButton) submitButton.disabled = true;
 
         const fd = new FormData(form);

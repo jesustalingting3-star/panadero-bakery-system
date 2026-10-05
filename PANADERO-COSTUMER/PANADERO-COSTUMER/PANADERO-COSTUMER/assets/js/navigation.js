@@ -21,7 +21,7 @@
     function accountMarkup(active) {
         const user = getCurrentUser();
         if (!user) {
-            return `<a href="login.html" class="${active === 'login' ? 'active' : ''}" ${active === 'login' ? 'aria-current="page"' : ''}><span class="account-label">Login</span></a>`;
+            return `<a href="/login.html" class="${active === 'login' ? 'active' : ''}" ${active === 'login' ? 'aria-current="page"' : ''}><span class="account-label">Login</span></a>`;
         }
 
         const name = escapeHtml(user.displayName || user.firstName || 'Account');
@@ -97,7 +97,7 @@
             logoutButton.addEventListener('click', async function () {
                 logoutButton.disabled = true;
                 if (window.AuthService) await AuthService.logout();
-                window.location.href = 'login.html';
+                window.location.href = '/login.html';
             });
         }
     }

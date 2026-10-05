@@ -18,12 +18,22 @@ The original HTML and CSS designs are preserved. The customer, staff, and admin 
    npm start
    ```
 
-4. Open:
+4. Open the role-based login page:
+   - Login: `http://localhost:3000/login.html`
+
+   Demo accounts for local testing:
+   - Staff: `staff@panadero.local` / `Staff123!`
+   - Admin: `admin@panadero.local` / `Admin123!`
+   - Customer: create one from `/customer/login.html`
+
+5. Open:
    - Customer: `http://localhost:3000/customer/index.html`
    - Staff: `http://localhost:3000/staff/staff-dashboard.html`
    - Admin: `http://localhost:3000/admin/admin.html`
 
 On startup, the server creates the required `reservations` and `inventory_batches` compatibility tables and seeds the bakery categories/products if the supplied database is empty.
+
+Staff and admin pages redirect to the role login page when no valid session is present. Customer orders and reservations also require a signed-in customer account.
 
 ## API coverage
 

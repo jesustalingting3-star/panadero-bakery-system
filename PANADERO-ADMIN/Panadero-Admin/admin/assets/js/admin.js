@@ -65,7 +65,7 @@
     admin.logs = Array.isArray(admin.logs) ? admin.logs : [];
 
     function syncServer() {
-        fetch((window.PANADERO_API || '/api') + '/admin/sync', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({categories: admin.categories, products: admin.products, users: admin.users, stocks: shared.stocks, orders: shared.orders, reservations: shared.reservations}) }).catch(() => {});
+        fetch((window.PANADERO_API || '/api') + '/admin/sync', { method: 'POST', headers: {'Content-Type':'application/json', ...(localStorage.getItem('panadero-api-token') ? {Authorization:'Bearer '+localStorage.getItem('panadero-api-token')} : {})}, body: JSON.stringify({categories: admin.categories, products: admin.products, users: admin.users, stocks: shared.stocks, orders: shared.orders, reservations: shared.reservations}) }).catch(() => {});
     }
     function persist() {
         sessionStorage.setItem(SHARED_KEY, JSON.stringify(shared));
@@ -757,7 +757,7 @@
     window.addEventListener('hashchange', route);
     route();
     // Hydrate the same UI from the database; all existing dialogs and layout remain unchanged.
-    fetch((window.PANADERO_API || '/api') + '/admin/state').then(r => r.json()).then(state => {
+    fetch((window.PANADERO_API || '/api') + '/admin/state', {headers: localStorage.getItem('panadero-api-token') ? {Authorization:'Bearer '+localStorage.getItem('panadero-api-token')} : {}}).then(r => r.json()).then(state => {
         if (!state.ok) return;
         admin.categories = state.categories || admin.categories;
         admin.products = (state.products || []).map(p => ({id:p.id,name:p.name,category:p.category,price:Number(p.price),image:p.image || ''}));

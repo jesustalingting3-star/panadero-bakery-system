@@ -1,0 +1,1 @@
+(function(){const raw=localStorage.getItem('panadero-auth-session-v2');let user=null;try{user=JSON.parse(raw||'null')}catch(_){}const token=localStorage.getItem('panadero-api-token');if(!token||!user||!['staff','admin'].includes(String(user.role||'').toLowerCase())) location.replace('/login.html');})();
