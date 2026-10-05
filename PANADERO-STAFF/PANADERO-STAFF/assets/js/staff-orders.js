@@ -20,7 +20,7 @@
     }
 
     function title(value) {
-        return String(value || '').replace(/\b\w/g, letter => letter.toUpperCase());
+        return ({ pending: 'Pending', processing: 'Processing', preparing: 'Processing', ready: 'Ready', completed: 'Completed', cancelled: 'Cancelled' })[String(value || '').toLowerCase()] || String(value || '').replace(/\b\w/g, letter => letter.toUpperCase());
     }
 
     function setMessage(text, type) {
@@ -29,11 +29,10 @@
     }
 
     function statusOptions(record) {
-        const statuses = ['pending', 'preparing', 'ready', 'completed'];
-        const current = statuses.indexOf(record.status);
+        const statuses = ['pending', 'processing', 'ready', 'completed'];
+        const current = String(record.status || '').toLowerCase() === 'preparing' ? 'processing' : String(record.status || '').toLowerCase();
         return statuses
-            .filter((status, index) => status === record.status || (current >= 0 && index === current + 1))
-            .map(status => `<option value="${status}" ${record.status === status ? 'selected' : ''}>${title(status)}</option>`)
+            .map(status => `<option value="${status}" ${current === status ? 'selected' : ''}>${title(status)}</option>`)
             .join('');
     }
 
@@ -97,7 +96,7 @@
                 <td><div class="order-items">${productText}</div></td>
                 <td>${scheduleText(record)}</td>
                 <td><strong>${money(record.total)}</strong></td>
-                <td><span class="status-badge ${escapeHtml(record.status)}">${escapeHtml(record.status)}</span></td>
+                <td><span class="status-badge ${escapeHtml(record.status)}">${escapeHtml(title(record.status))}</span></td>
                 <td><div class="stock-editor"><select class="staff-field record-status-select" aria-label="Status for ${escapeHtml(reference)}">${statusOptions(record)}</select><button type="button" class="staff-small-button save-status">Save</button></div></td>`;
             table.appendChild(row);
 

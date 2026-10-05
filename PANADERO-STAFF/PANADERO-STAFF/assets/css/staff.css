@@ -88,7 +88,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
 .status-badge{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eee;color:#555;font-size:12px;font-weight:800;text-transform:capitalize}
 .status-badge.pending{background:#fff1ca;color:#7a5710}
-.status-badge.preparing{background:#dceaff;color:#285995}
+.status-badge.processing,.status-badge.preparing{background:#dceaff;color:#285995}
 .status-badge.ready,.status-badge.in-stock{background:#d9f2df;color:#21683a}
 .status-badge.completed{background:#e4e5e7;color:#4f5357}
 .status-badge.out-of-stock{background:#f7dedd;color:#8d2922}
