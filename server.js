@@ -16,7 +16,8 @@ const pool = mysql.createPool({
   host: process.env.DB_HOST || '127.0.0.1', port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER || 'root', password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'panadero_bakery', waitForConnections: true,
-  connectionLimit: 10, decimalNumbers: true
+  connectionLimit: 10, decimalNumbers: true,
+  ...(process.env.DB_SSL === 'true' ? { ssl: { rejectUnauthorized: false } } : {})
 });
 const databaseReady = migrate();
 app.use(async (_req, res, next) => {
