@@ -1,4 +1,4 @@
-(function () {
+(async function () {
     const table = document.getElementById('inventory-table');
     if (!table) return;
 
@@ -44,7 +44,8 @@
         categoryFilter.innerHTML = '<option value="all">All Categories</option>';
         ProductService.getCategories().forEach(category => {
             const option = document.createElement('option');
-            option.value = category.id;
+            const categorySlugs = { breads: 'bread', cakes: 'cake', doughnuts: 'doughnut', pies: 'pie' };
+            option.value = categorySlugs[String(category.name || '').toLowerCase()] || String(category.name || '').toLowerCase().replace(/\s+/g, '-');
             option.textContent = category.name;
             categoryFilter.appendChild(option);
         });
@@ -207,6 +208,13 @@
         renderBatches();
     });
 
+    window.addEventListener('panadero-inventory-error', function (event) {
+        setMessage(message, event.detail || 'Unable to load inventory.', 'error');
+        empty.textContent = 'Inventory could not be loaded.';
+        empty.hidden = false;
+    });
+
+    if (window.PANADERO_INVENTORY_READY) await window.PANADERO_INVENTORY_READY;
     renderInventory();
     renderBatches();
     if (new URLSearchParams(location.search).get('action') === 'batch') openDialog();
