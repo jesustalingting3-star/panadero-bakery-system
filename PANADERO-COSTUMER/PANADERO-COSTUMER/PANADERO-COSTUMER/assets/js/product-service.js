@@ -1,1 +1,35 @@
-(function(){const data=window.PANADERO_DATA||{products:[],categories:[],fallbackImage:''};const byId=id=>data.products.find(p=>String(p.id)===String(id))||null;const bySlug=s=>data.products.find(p=>p.slug===String(s))||null;const cat=id=>(data.categories.find(c=>String(c.id)===String(id))||{name:id||''}).name;window.ProductService={async refreshProducts(){try{const r=await fetch((window.PANADERO_API||'/api')+'/catalog');if(r.ok){const d=await r.json();data.products=d.products||[];data.categories=d.categories||[];window.PANADERO_DATA=data;return true}}catch(_){}return false},getProducts(){return data.products.filter(p=>p.available!==false).map(p=>({...p}))},getProductById:id=>byId(id)?({...byId(id)}):null,getProductBySlug:s=>bySlug(s)?({...bySlug(s)}):null,getProductsByCategory:c=>this.getProducts().filter(p=>String(p.category)===String(c)),searchProducts:q=>{q=String(q||'').toLowerCase().trim();return this.getProducts().filter(p=>!q||p.name.toLowerCase().includes(q)||String(p.category).toLowerCase().includes(q)||cat(p.category).toLowerCase().includes(q))},getCategories:()=>data.categories.map(c=>({...c})),getCategoryName:cat,isValidCategory:id=>data.categories.some(c=>String(c.id)===String(id)),formatPrice:v=>'₱'+Number(v||0).toFixed(2),fallbackImage:data.fallbackImage}})();
+(function () {
+    const data = window.PANADERO_DATA || { products: [], categories: [], fallbackImage: '' };
+    const categorySlug = value => String(value || '').toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const byId = id => data.products.find(product => String(product.id) === String(id)) || null;
+    const bySlug = slug => data.products.find(product => product.slug === String(slug)) || null;
+    const getProducts = () => data.products.filter(product => product.available !== false).map(product => ({ ...product }));
+    const getCategoryName = id => (data.categories.find(category => String(category.id) === String(id)) || { name: id || '' }).name;
+    const getCategories = () => data.categories.map(category => ({ ...category }));
+    window.ProductService = {
+        async refreshProducts() {
+            try {
+                const response = await fetch((window.PANADERO_API || '/api') + '/catalog');
+                if (!response.ok) return false;
+                const result = await response.json();
+                data.products = result.products || [];
+                data.categories = (result.categories || []).map(category => ({ ...category, id: categorySlug(category.name) }));
+                window.PANADERO_DATA = data;
+                return true;
+            } catch (_) { return false; }
+        },
+        getProducts,
+        getProductById: id => byId(id) ? { ...byId(id) } : null,
+        getProductBySlug: slug => bySlug(slug) ? { ...bySlug(slug) } : null,
+        getProductsByCategory: category => getProducts().filter(product => String(product.category) === String(category)),
+        searchProducts: query => {
+            const q = String(query || '').trim().toLowerCase();
+            return getProducts().filter(product => !q || product.name.toLowerCase().includes(q) || String(product.category).toLowerCase().includes(q) || getCategoryName(product.category).toLowerCase().includes(q));
+        },
+        getCategories,
+        getCategoryName,
+        isValidCategory: id => data.categories.some(category => String(category.id) === String(id)),
+        formatPrice: value => '₱' + Number(value || 0).toFixed(2),
+        fallbackImage: data.fallbackImage
+    };
+})();
