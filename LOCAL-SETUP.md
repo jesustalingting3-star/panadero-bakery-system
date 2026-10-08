@@ -6,6 +6,19 @@
 - MySQL 8 or MariaDB
 - A terminal such as Command Prompt, PowerShell, or Terminal
 
+## Fastest option: one-click Windows setup
+
+If you are using Windows with XAMPP or MySQL already installed:
+
+1. Start **MySQL** in XAMPP, if it is not already running.
+2. Double-click `PANADERO-ONE-CLICK.bat`.
+3. Wait while it creates the database and installs the Node.js packages.
+4. The browser will open automatically at `http://localhost:3000/login.html`.
+
+The launcher automatically finds MySQL in PATH, XAMPP, or common MySQL installation folders. If your MySQL root account has a password, it will ask for it during the first run. It keeps an existing `.env` file instead of overwriting your settings.
+
+The launcher requires **Node.js** to already be installed. It cannot install Node.js or MySQL itself. If the launcher reports that Node.js is missing, install the Node.js LTS version, restart Windows, and double-click the launcher again.
+
 ## 1. Create the database
 
 From the PANADERO project folder, run:
