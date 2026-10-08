@@ -4,6 +4,17 @@
     const loginMessage = document.getElementById("login-message");
     const registerMessage = document.getElementById("register-message");
 
+    function redirectForRole(user) {
+        const role = String(user && user.role || "customer").trim().toLowerCase();
+        if (role === "admin") {
+            window.location.href = "/admin/admin.html";
+        } else if (role === "staff") {
+            window.location.href = "/staff/staff-dashboard.html";
+        } else {
+            window.location.href = "index.html";
+        }
+    }
+
     if (login) {
         login.addEventListener("submit", async function (event) {
             event.preventDefault();
@@ -25,7 +36,7 @@
                 loginMessage.textContent = "Logged in as " + result.user.displayName + ".";
 
                 window.setTimeout(function () {
-                    window.location.href = "index.html";
+                    redirectForRole(result.user);
                 }, 450);
                 return;
             }

@@ -77,7 +77,7 @@ app.get('/login.html', (_req, res) => res.sendFile(path.join(__dirname, 'login.h
 app.use('/customer', express.static(customerRoot));
 app.use('/staff', express.static(path.join(__dirname, 'PANADERO-STAFF/PANADERO-STAFF')));
 app.use('/admin', express.static(path.join(__dirname, 'PANADERO-ADMIN/Panadero-Admin/admin')));
-app.get('/', (_req,res) => res.redirect('/customer/index.html'));
+app.get('/', (_req,res) => res.redirect('/login.html'));
 export default app;
 if (!process.env.VERCEL) {
   const port = Number(process.env.PORT || 3000);

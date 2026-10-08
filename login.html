@@ -25,13 +25,21 @@
   </main>
   <script>
     const API = '/api';
+    function roleOf(user) {
+      return String(user && user.role || 'customer').trim().toLowerCase();
+    }
+    function destinationFor(user) {
+      const role = roleOf(user);
+      if (role === 'admin') return '/admin/admin.html';
+      if (role === 'staff') return '/staff/staff-dashboard.html';
+      return '/customer/index.html';
+    }
     (function redirectExistingSession() {
       try {
         const user = JSON.parse(localStorage.getItem('panadero-auth-session-v2') || 'null');
         const token = localStorage.getItem('panadero-api-token');
         if (!user || !token) return;
-        const destination = user.role === 'admin' ? '/admin/admin.html' : user.role === 'staff' ? '/staff/staff-dashboard.html' : '/customer/index.html';
-        location.replace(destination);
+        location.replace(destinationFor(user));
       } catch (_) {}
     })();
     const form = document.getElementById('login-form');
@@ -45,8 +53,7 @@
         if (!result.ok) { message.textContent = result.message || 'Unable to sign in.'; return; }
         localStorage.setItem('panadero-auth-session-v2', JSON.stringify(result.user));
         localStorage.setItem('panadero-api-token', result.token);
-        const destination = result.user.role === 'admin' ? '/admin/admin.html' : result.user.role === 'staff' ? '/staff/staff-dashboard.html' : '/customer/index.html';
-        location.replace(destination);
+        location.replace(destinationFor(result.user));
       } catch (_) { message.textContent = 'The bakery server is unavailable.'; }
     });
   </script>
