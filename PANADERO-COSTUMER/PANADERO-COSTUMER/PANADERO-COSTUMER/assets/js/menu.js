@@ -5,8 +5,7 @@
     const buttons = [...document.querySelectorAll('.category-button')];
     if (!grid) return;
 
-    const loaded = await ProductService.refreshProducts();
-    if (!loaded && status) status.textContent = 'Unable to load the menu. Please refresh or try again later.';
+    await ProductService.refreshProducts();
 
     let category = 'bread';
     const params = new URLSearchParams(location.search);
@@ -52,7 +51,6 @@
                         <h3>${product.name}</h3>
                         <p class="price">${ProductService.formatPrice(product.price)}</p>
                         ${stockLabel}
-                        <span class="product-order-link">View &amp; Order</span>
                     </div>
                 `;
                 grid.appendChild(card);

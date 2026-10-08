@@ -1,1 +1,89 @@
-(function(){const images=['https://www.thehypemenu.com/images/articles/filipino-bakery-breads-guide.webp','https://tinyurl.com/yt9au5kd','https://tinyurl.com/3yafkent'];const alts=['Freshly baked bread from PANADERO','Cake and sweet treats from PANADERO','Freshly baked pie from PANADERO'];let index=0;const img=document.getElementById('banner-image'),prev=document.getElementById('previous-button'),next=document.getElementById('next-button');function show(){if(img){img.src=images[index];img.alt=alts[index];}}if(prev&&next&&img){show();next.addEventListener('click',()=>{index=(index+1)%images.length;show();});prev.addEventListener('click',()=>{index=(index-1+images.length)%images.length;show();});}})();
+(function () {
+    const images = [
+        'assets/images/slide1.jpg',
+        'assets/images/slide2.jpg',
+        'assets/images/slide3.jpg'
+    ];
+
+    const alts = [
+        'Freshly baked breads on display at PANADERO',
+        'Cake with ice cream and a cherry from PANADERO',
+        'Fruitcake topped with sugared cranberries from PANADERO'
+    ];
+
+    const AUTOPLAY_DELAY = 3000;
+    let index = 0;
+    let autoplayTimer = null;
+
+    const banner = document.querySelector('.banner');
+    const image = document.getElementById('banner-image');
+    const previousButton = document.getElementById('previous-button');
+    const nextButton = document.getElementById('next-button');
+
+    if (!banner || !image || !previousButton || !nextButton || images.length < 2) {
+        return;
+    }
+
+    function showSlide(nextIndex) {
+        index = (nextIndex + images.length) % images.length;
+        image.src = images[index];
+        image.alt = alts[index];
+    }
+
+    function nextSlide() {
+        showSlide(index + 1);
+    }
+
+    function previousSlide() {
+        showSlide(index - 1);
+    }
+
+    function stopAutoplay() {
+        if (autoplayTimer !== null) {
+            window.clearInterval(autoplayTimer);
+            autoplayTimer = null;
+        }
+    }
+
+    function startAutoplay() {
+        stopAutoplay();
+        if (document.hidden) {
+            return;
+        }
+        autoplayTimer = window.setInterval(nextSlide, AUTOPLAY_DELAY);
+    }
+
+    function restartAutoplay() {
+        startAutoplay();
+    }
+
+    nextButton.addEventListener('click', function () {
+        nextSlide();
+        restartAutoplay();
+    });
+
+    previousButton.addEventListener('click', function () {
+        previousSlide();
+        restartAutoplay();
+    });
+
+    banner.addEventListener('mouseenter', stopAutoplay);
+    banner.addEventListener('mouseleave', startAutoplay);
+    banner.addEventListener('focusin', stopAutoplay);
+    banner.addEventListener('focusout', function (event) {
+        if (!banner.contains(event.relatedTarget)) {
+            startAutoplay();
+        }
+    });
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            stopAutoplay();
+        } else {
+            startAutoplay();
+        }
+    });
+
+    showSlide(0);
+    startAutoplay();
+})();

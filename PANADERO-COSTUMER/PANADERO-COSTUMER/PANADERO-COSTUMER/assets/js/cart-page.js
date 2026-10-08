@@ -33,7 +33,17 @@
                 CartService.updateQuantity(entry.productId, input.value);
                 render();
             });
-            row.querySelector('.remove-cart-item').addEventListener('click', function () {
+            row.querySelector('.remove-cart-item').addEventListener('click', async function () {
+                const confirmed = window.PanaderoConfirm
+                    ? await PanaderoConfirm({
+                        title: 'Remove item?',
+                        message: `${entry.product.name} will be removed from your cart.`,
+                        confirmText: 'Remove',
+                        danger: true
+                    })
+                    : window.confirm(`Remove ${entry.product.name} from your cart?`);
+
+                if (!confirmed) return;
                 CartService.removeItem(entry.productId);
                 render();
             });

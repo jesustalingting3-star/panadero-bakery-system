@@ -1,4 +1,4 @@
-(async function () {
+(function () {
     const table = document.getElementById('inventory-table');
     if (!table) return;
 
@@ -44,8 +44,7 @@
         categoryFilter.innerHTML = '<option value="all">All Categories</option>';
         ProductService.getCategories().forEach(category => {
             const option = document.createElement('option');
-            const categorySlugs = { breads: 'bread', cakes: 'cake', doughnuts: 'doughnut', pies: 'pie' };
-            option.value = categorySlugs[String(category.name || '').toLowerCase()] || String(category.name || '').toLowerCase().replace(/\s+/g, '-');
+            option.value = category.id;
             option.textContent = category.name;
             categoryFilter.appendChild(option);
         });
@@ -142,7 +141,18 @@
             return;
         }
 
-        const result = await Promise.resolve(InventoryService.updateStock(row.dataset.productId, input.value));
+        const productName = row.querySelector('.staff-table-product strong')?.textContent || 'this product';
+        const confirmed = window.StaffConfirm
+            ? await StaffConfirm({
+                title: 'Update stock?',
+                message: `Set ${productName} stock to ${input.value}?`,
+                confirmText: 'Update'
+            })
+            : window.confirm('Update this stock quantity?');
+
+        if (!confirmed) return;
+
+        const result = InventoryService.updateStock(row.dataset.productId, input.value);
         setMessage(message, result.ok ? 'Stock updated.' : result.message, result.ok ? 'success' : 'error');
         renderInventory();
     });
@@ -183,21 +193,40 @@
         if (!form.reportValidity()) return;
 
         const data = new FormData(form);
-        const result = await Promise.resolve(InventoryService.addBatch({
+        const payload = {
             productId: data.get('productId'),
             quantity: data.get('quantity'),
             bakedDate: data.get('bakedDate'),
             expirationDate: data.get('expirationDate'),
             notes: data.get('notes')
-        }));
+        };
+        const productName = productSelect.options[productSelect.selectedIndex]?.textContent || 'this product';
+
+        closeDialog();
+        const confirmed = window.StaffConfirm
+            ? await StaffConfirm({
+                title: 'Save fresh batch?',
+                message: `Add ${payload.quantity} pcs of ${productName} to inventory?`,
+                confirmText: 'Save Batch'
+            })
+            : window.confirm('Save this fresh batch?');
+
+        if (!confirmed) {
+            if (typeof dialog.showModal === 'function') dialog.showModal();
+            else dialog.setAttribute('open', '');
+            return;
+        }
+
+        const result = InventoryService.addBatch(payload);
 
         if (!result.ok) {
+            if (typeof dialog.showModal === 'function') dialog.showModal();
+            else dialog.setAttribute('open', '');
             setMessage(batchMessage, result.message, 'error');
             return;
         }
 
         form.reset();
-        closeDialog();
         setMessage(message, 'Batch saved.', 'success');
         renderInventory();
         renderBatches();
@@ -208,13 +237,6 @@
         renderBatches();
     });
 
-    window.addEventListener('panadero-inventory-error', function (event) {
-        setMessage(message, event.detail || 'Unable to load inventory.', 'error');
-        empty.textContent = 'Inventory could not be loaded.';
-        empty.hidden = false;
-    });
-
-    if (window.PANADERO_INVENTORY_READY) await window.PANADERO_INVENTORY_READY;
     renderInventory();
     renderBatches();
     if (new URLSearchParams(location.search).get('action') === 'batch') openDialog();

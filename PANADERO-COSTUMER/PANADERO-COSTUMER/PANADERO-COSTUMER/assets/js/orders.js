@@ -2,6 +2,13 @@
     const buttons = [...document.querySelectorAll('.tab-button')];
     const panels = [...document.querySelectorAll('.records-panel')];
     const signin = document.getElementById('signin-state');
+    const message = document.getElementById('records-message');
+
+    function setMessage(text, type) {
+        if (!message) return;
+        message.textContent = text || '';
+        message.className = 'status-message' + (type ? ' ' + type : '');
+    }
 
     function activate(name) {
         buttons.forEach(function (button) {
@@ -18,7 +25,11 @@
     buttons.forEach(function (button) {
         button.addEventListener('click', function () { activate(button.dataset.tab); });
     });
-    activate('orders');
+
+    const pageParams = new URLSearchParams(window.location.search);
+    const requestedTab = pageParams.get('tab');
+    const requestedReference = pageParams.get('ref');
+    activate(requestedTab === 'reservations' ? 'reservations' : 'orders');
 
     function getReference(record, type) {
         if (type === 'order') {
@@ -46,10 +57,37 @@
                 const reference = getReference(record, type);
                 const date = record.createdAt || record.created_at || '';
                 const dateText = date ? new Date(date).toLocaleString() : '';
-                const statusLabels = { pending: 'Received', processing: 'Processing', ready: 'Ready for Pickup', completed: 'Completed', cancelled: 'Cancelled' };
-                const statusLabel = statusLabels[String(record.status || '').toLowerCase()] || record.status || 'Received';
-                const statusNote = statusLabel === 'Received' ? 'Order received. Staff will update it when preparation begins.' : '';
-                card.innerHTML = `<div class="record-top"><div><strong>${type === 'order' ? 'Order' : 'Reservation'}${reference ? ' ' + reference : ''}</strong><p class="record-meta">${dateText}</p>${statusNote ? `<p class="record-meta">${statusNote}</p>` : ''}</div><span class="record-status">${statusLabel}</span></div>`;
+                const canCancel = type === 'order' && ['placed', 'pending'].includes(record.status);
+                const paymentLabel = type === 'order' && record.paymentMethod
+                    ? { cash: 'Cash', card: 'Card', gcash: 'GCash' }[record.paymentMethod] || record.paymentMethod
+                    : '';
+                card.innerHTML = `<div class="record-top"><div><strong>${type === 'order' ? 'Order' : 'Reservation'}${reference ? ' ' + reference : ''}</strong><p class="record-meta">${dateText}${paymentLabel ? ' • Payment: ' + paymentLabel : ''}</p></div><span class="record-status">${record.status || ''}</span></div>${canCancel ? '<div class="record-actions"><button type="button" class="record-cancel-button">Cancel Order</button></div>' : ''}`;
+                if (requestedReference && reference && String(reference) === requestedReference) {
+                    card.setAttribute('aria-current', 'true');
+                }
+
+                const cancelButton = card.querySelector('.record-cancel-button');
+                if (cancelButton) {
+                    cancelButton.addEventListener('click', async function () {
+                        const confirmed = window.PanaderoConfirm
+                            ? await PanaderoConfirm({
+                                title: 'Cancel order?',
+                                message: `${reference || 'This order'} will be cancelled.`,
+                                confirmText: 'Cancel Order',
+                                danger: true
+                            })
+                            : window.confirm('Cancel this order?');
+
+                        if (!confirmed) return;
+
+                        cancelButton.disabled = true;
+                        const result = await OrderService.cancelOrder(record.id);
+                        setMessage(result.ok ? 'Order cancelled.' : result.message, result.ok ? 'success' : 'error');
+                        if (result.ok) await load();
+                        else cancelButton.disabled = false;
+                    });
+                }
+
                 list.appendChild(card);
             }
             empty.hidden = shown.length > 0;

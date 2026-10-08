@@ -42,12 +42,14 @@
     subtotalEl.textContent = ProductService.formatPrice(lineTotal);
 
     const currentUser = window.AuthService ? AuthService.getCurrentUser() : null;
-    if (currentUser) {
-        if (form.elements.firstName) form.elements.firstName.value = currentUser.firstName || '';
-        if (form.elements.lastName) form.elements.lastName.value = currentUser.lastName || '';
-        if (form.elements.email) form.elements.email.value = currentUser.email || '';
-        if (form.elements.mobile) form.elements.mobile.value = currentUser.mobile || '';
-    }
+    const contactDefaults = window.CustomerPreferenceService
+        ? CustomerPreferenceService.getContactDefaults()
+        : (currentUser || {});
+
+    if (form.elements.firstName) form.elements.firstName.value = contactDefaults.firstName || '';
+    if (form.elements.lastName) form.elements.lastName.value = contactDefaults.lastName || '';
+    if (form.elements.email) form.elements.email.value = contactDefaults.email || '';
+    if (form.elements.mobile) form.elements.mobile.value = contactDefaults.mobile || '';
 
     const dateInput = document.getElementById('date');
     const timeInput = document.getElementById('time');
@@ -75,7 +77,6 @@
             }
         }
 
-        if (!currentUser) { message.className = 'status-message info'; message.textContent = 'Please sign in before placing a reservation.'; setTimeout(() => location.assign('/login.html'), 700); return; }
         if (submitButton) submitButton.disabled = true;
         const fd = new FormData(form);
 
@@ -101,19 +102,24 @@
 
             if (!result || !result.ok) {
                 message.className = 'status-message info';
-                message.textContent = result?.message || 'Your reservation details are valid, but the reservation backend is not connected yet. No reservation was created.';
+                message.textContent = result?.message || 'Unable to submit the reservation.';
                 if (submitButton) submitButton.disabled = false;
                 return;
             }
 
             const reference = result.reservation?.reservationNumber || result.reservation?.reservation_number || result.reservation?.reference || '';
-            message.className = 'status-message success';
-            message.textContent = reference
-                ? `Reservation request accepted. Reference: ${reference}`
-                : (result.message || 'Reservation request accepted.');
+
+            if (window.CustomerPreferenceService) {
+                CustomerPreferenceService.saveReservationPreferences(reservation);
+            }
+
+            const statusUrl = new URL('track-order.html', window.location.href);
+            statusUrl.searchParams.set('tab', 'reservations');
+            if (reference) statusUrl.searchParams.set('ref', reference);
+            window.location.assign(statusUrl.href);
         } catch (error) {
             message.className = 'status-message error';
-            message.textContent = 'The reservation could not be submitted. Please try again later.';
+            message.textContent = 'Unable to submit the reservation. Please try again.';
             if (submitButton) submitButton.disabled = false;
         }
     });

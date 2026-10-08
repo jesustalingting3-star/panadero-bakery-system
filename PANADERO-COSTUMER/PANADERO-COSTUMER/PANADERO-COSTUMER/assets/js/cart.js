@@ -175,7 +175,17 @@
                 updateQuantity(entry.productId, event.target.value);
                 renderDrawer();
             });
-            row.querySelector('.remove-link').addEventListener('click', function () {
+            row.querySelector('.remove-link').addEventListener('click', async function () {
+                const confirmed = window.PanaderoConfirm
+                    ? await PanaderoConfirm({
+                        title: 'Remove item?',
+                        message: `${entry.product.name} will be removed from your cart.`,
+                        confirmText: 'Remove',
+                        danger: true
+                    })
+                    : window.confirm(`Remove ${entry.product.name} from your cart?`);
+
+                if (!confirmed) return;
                 removeItem(entry.productId);
                 renderDrawer();
             });

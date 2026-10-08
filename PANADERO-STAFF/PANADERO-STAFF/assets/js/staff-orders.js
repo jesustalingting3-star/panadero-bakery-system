@@ -20,7 +20,7 @@
     }
 
     function title(value) {
-        return ({ pending: 'Pending', processing: 'Processing', preparing: 'Processing', ready: 'Ready', completed: 'Completed', cancelled: 'Cancelled' })[String(value || '').toLowerCase()] || String(value || '').replace(/\b\w/g, letter => letter.toUpperCase());
+        return String(value || '').replace(/\b\w/g, letter => letter.toUpperCase());
     }
 
     function setMessage(text, type) {
@@ -29,10 +29,11 @@
     }
 
     function statusOptions(record) {
-        const statuses = ['pending', 'processing', 'ready', 'completed'];
-        const current = String(record.status || '').toLowerCase() === 'preparing' ? 'processing' : String(record.status || '').toLowerCase();
+        const statuses = ['pending', 'preparing', 'ready', 'completed'];
+        const current = statuses.indexOf(record.status);
         return statuses
-            .map(status => `<option value="${status}" ${current === status ? 'selected' : ''}>${title(status)}</option>`)
+            .filter((status, index) => status === record.status || (current >= 0 && index === current + 1))
+            .map(status => `<option value="${status}" ${record.status === status ? 'selected' : ''}>${title(status)}</option>`)
             .join('');
     }
 
@@ -46,15 +47,12 @@
         }
 
         const method = title(record.fulfillment && record.fulfillment.method || 'pickup');
-        const when = [
-            record.fulfillment && record.fulfillment.preferredDate,
-            record.fulfillment && record.fulfillment.preferredTime
-        ].filter(Boolean).join(' ');
         const address = record.fulfillment && record.fulfillment.deliveryAddress;
+        const payment = { cash: 'Cash', card: 'Card', gcash: 'GCash' }[record.paymentMethod] || record.paymentMethod || '';
 
         return escapeHtml(method) +
             (address ? '<br><small>' + escapeHtml(address) + '</small>' : '') +
-            (when ? '<br><small>' + escapeHtml(when) + '</small>' : '');
+            (payment ? '<br><small>Payment: ' + escapeHtml(payment) + '</small>' : '');
     }
 
     function searchableText(record) {
@@ -96,7 +94,7 @@
                 <td><div class="order-items">${productText}</div></td>
                 <td>${scheduleText(record)}</td>
                 <td><strong>${money(record.total)}</strong></td>
-                <td><span class="status-badge ${escapeHtml(record.status)}">${escapeHtml(title(record.status))}</span></td>
+                <td><span class="status-badge ${escapeHtml(record.status)}">${escapeHtml(record.status)}</span></td>
                 <td><div class="stock-editor"><select class="staff-field record-status-select" aria-label="Status for ${escapeHtml(reference)}">${statusOptions(record)}</select><button type="button" class="staff-small-button save-status">Save</button></div></td>`;
             table.appendChild(row);
 
@@ -130,6 +128,31 @@
 
         const row = button.closest('tr');
         const selectedStatus = row.querySelector('.record-status-select').value;
+        const record = records.find(item => String(item.id) === String(row.dataset.recordId));
+
+        if (!record) {
+            setMessage('Record not found.', 'error');
+            return;
+        }
+        if (selectedStatus === record.status) {
+            setMessage('Choose the next status first.', 'error');
+            return;
+        }
+
+        const reference = record.orderNumber || record.reservationNumber || 'this request';
+        const approvingReservation = row.dataset.recordType === 'reservation' &&
+            record.status === 'pending' && selectedStatus === 'preparing';
+
+        const confirmed = window.StaffConfirm
+            ? await StaffConfirm({
+                title: approvingReservation ? 'Approve reservation?' : 'Update status?',
+                message: `${reference}: ${title(record.status)} → ${title(selectedStatus)}.`,
+                confirmText: approvingReservation ? 'Approve' : 'Update'
+            })
+            : window.confirm('Update this status?');
+
+        if (!confirmed) return;
+
         button.disabled = true;
 
         try {
