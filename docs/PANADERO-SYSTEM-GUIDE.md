@@ -151,7 +151,7 @@ If any step fails, the transaction rolls back so the database does not contain a
 
 - `server.js` — Express routes, MySQL queries, validation, and migrations
 - `package.json` — Node.js dependencies and start commands
-- `Arambulo-and-galvez.sql` — supplied base database schema
+- `database/panadero.sql` — supplied base database schema
 - Customer `assets/js/*-service.js` — API adapters used by customer pages
 - Staff `assets/js/staff-data.js` — API adapter used by staff pages
 - Admin `assets/js/admin.js` — existing admin UI plus API hydration/synchronization

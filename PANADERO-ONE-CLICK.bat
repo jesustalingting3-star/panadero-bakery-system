@@ -56,7 +56,7 @@ if errorlevel 1 (
   if exist "C:\xampp\mysql_start.bat" start "" /min "C:\xampp\mysql_start.bat"
   timeout /t 5 /nobreak >nul
 )
-"%MYSQL%" --protocol=tcp -h 127.0.0.1 -P 3306 -u root < "Arambulo-and-galvez.sql" >nul 2>nul
+"%MYSQL%" --protocol=tcp -h 127.0.0.1 -P 3306 -u root < "database\panadero.sql" >nul 2>nul
 if errorlevel 1 (
   echo.
   echo MySQL rejected the root account without a password.
@@ -65,7 +65,7 @@ if errorlevel 1 (
   set "MYSQL_PASSWORD="
   set /p "MYSQL_PASSWORD=MySQL root password: "
   set "MYSQL_PWD=%MYSQL_PASSWORD%"
-  "%MYSQL%" --protocol=tcp -h 127.0.0.1 -P 3306 -u root < "Arambulo-and-galvez.sql"
+  "%MYSQL%" --protocol=tcp -h 127.0.0.1 -P 3306 -u root < "database\panadero.sql"
   set "MYSQL_PWD="
   if errorlevel 1 (
     echo.

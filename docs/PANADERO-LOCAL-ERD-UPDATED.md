@@ -1,6 +1,6 @@
-# PANADERO Local System — Updated ERD
+# PANADERO Local System — Canonical ERD
 
-This diagram describes the local MySQL database used by `server.js`. The supplied SQL creates the core tables. The Node.js startup migration creates `reservations` and `inventory_batches` when they are missing because the staff and customer features require them.
+This is the canonical entity-relationship diagram for the local MySQL database `panadero_bakery`. It matches `database/panadero.sql` and the compatibility migrations in `server.js`.
 
 ```mermaid
 erDiagram
@@ -11,11 +11,11 @@ erDiagram
     BREAD_PRODUCTS ||--o{ ORDER_ITEMS : appears_in
     ORDERS ||--|{ ORDER_ITEMS : contains
     BREAD_PRODUCTS ||--o{ RESERVATIONS : reserved_as
-    BREAD_PRODUCTS ||--o{ INVENTORY_BATCHES : baked_in
+    BREAD_PRODUCTS ||--o{ INVENTORY_BATCHES : tracked_in
 
     USERS {
         INT user_id PK
-        VARCHAR username
+        VARCHAR username UK
         VARCHAR email UK
         VARCHAR password_hash
         ENUM role "Admin | Staff | Customer"
@@ -90,18 +90,25 @@ erDiagram
 - One user can make many reservations.
 - One user can create many system-log records.
 - One category contains many products.
-- One order has one or more order items.
+- One order contains one or more order items.
 - One product can appear in many order items.
 - One product can be reserved many times.
 - One product can have many inventory batches.
 - `order_items.unit_price` preserves the price used at checkout even if the catalog price changes later.
-- Current stock is stored in `bread_products.stock_quantity`.
-- A new inventory batch increases the product's current stock.
-- A successful order or reservation decreases current stock inside a database transaction.
+- Current sellable stock is stored in `bread_products.stock_quantity`.
+- Adding an inventory batch increases current product stock.
+- A successful order or reservation decreases stock inside a database transaction.
+- `system_logs` is included for audit history; the current application returns an empty log list until audit writes are added.
 
-## Runtime-only data not represented in the ERD
+## Schema source and runtime migration
 
-- Browser cart: stored temporarily in browser local storage until checkout.
-- Browser login session: the browser stores a token, while the current Node.js process keeps the token-to-user session in memory.
-- API requests: not database tables; they are HTTP requests handled by Express.
-- Product image paths: served as local static assets and are not stored in the database.
+- **Canonical import file:** `database/panadero.sql`
+- **Runtime compatibility:** `server.js` uses `CREATE TABLE IF NOT EXISTS` for `reservations` and `inventory_batches`, so an older database can still start safely.
+- **Seed behavior:** `server.js` creates the initial categories, products, and demo Staff/Admin accounts when the corresponding tables are empty.
+
+## Runtime-only data not shown in the ERD
+
+- Browser cart: temporary local storage until checkout.
+- Browser login session: token kept in browser storage; token sessions are held in the running Node.js process.
+- API requests: HTTP messages handled by Express, not database tables.
+- Product images: local static assets, not database records.

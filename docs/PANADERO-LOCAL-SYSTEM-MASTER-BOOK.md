@@ -166,7 +166,7 @@ PANADERO-LOCAL-FINAL/
 |-- package.json                 Node.js scripts and dependencies
 |-- package-lock.json            Exact dependency versions
 |-- .env.example                 Local configuration template
-|-- Arambulo-and-galvez.sql      Supplied database schema and seed structure
+|-- database/panadero.sql      Supplied database schema and seed structure
 |-- LOCAL-SETUP.md               Short local setup guide
 |-- README.md                    Project overview
 |
@@ -212,14 +212,14 @@ PANADERO-LOCAL-FINAL/
 `-- docs/
     |-- PANADERO-LOCAL-SYSTEM-MASTER-BOOK.md
     |-- PANADERO-LOCAL-ERD-UPDATED.md
-    |-- PANADERO-ERD.png
+    |-- PANADERO-LOCAL-ERD-UPDATED.png
     `-- PANADERO-SYSTEM-GUIDE.md
 ```
 
 ## Source-of-truth rules
 
 - `server.js` is the source of truth for backend rules, prices, stock checks, permissions, and database writes.
-- `Arambulo-and-galvez.sql` is the source of truth for the supplied base database structure.
+- `database/panadero.sql` is the source of truth for the supplied base database structure.
 - The customer HTML/CSS files are the source of truth for the visual design.
 - Customer service JavaScript is the adapter between the existing design and the API.
 - `.env` is local-only and must never be committed or shared.
@@ -244,7 +244,7 @@ The launcher performs these steps:
 3. Find mysql.exe in PATH, XAMPP, or common MySQL folders.
 4. Create .env from .env.example if .env does not exist.
 5. Try to start common MySQL/XAMPP services.
-6. Run Arambulo-and-galvez.sql through mysql.exe.
+6. Run database/panadero.sql through mysql.exe.
 7. Run npm install if node_modules is missing.
 8. Start npm start in a separate server window.
 9. Wait for GET /api/health to return success.
@@ -258,7 +258,7 @@ The launcher does not replace Node.js or MySQL. Those programs must already be i
 The equivalent manual commands are:
 
 ```bash
-mysql -u root -p < Arambulo-and-galvez.sql
+mysql -u root -p < database/panadero.sql
 copy .env.example .env
 npm install
 npm start
