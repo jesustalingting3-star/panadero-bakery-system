@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="PANADERO logo">
+  <circle cx="60" cy="60" r="58" fill="#523622"/>
+  <circle cx="60" cy="60" r="52" fill="none" stroke="#f2bd45" stroke-width="3"/>
+  <!-- loaf -->
+  <path d="M26 72 C26 49 41 36 60 36 C79 36 94 49 94 72 C94 79 89 84 82 84 L38 84 C31 84 26 79 26 72 Z" fill="#f2bd45"/>
+  <path d="M34 60 C38 46 49 40 60 40" fill="none" stroke="#f5ead7" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+  <!-- scoring -->
+  <g stroke="#523622" stroke-width="5" stroke-linecap="round">
+    <line x1="47" y1="52" x2="55" y2="70"/>
+    <line x1="60" y1="49" x2="68" y2="67"/>
+    <line x1="73" y1="52" x2="81" y2="70"/>
+  </g>
+  <!-- wheat sprig -->
+  <g fill="#f5ead7">
+    <ellipse cx="44" cy="95" rx="3.2" ry="6" transform="rotate(-35 44 95)"/>
+    <ellipse cx="60" cy="97" rx="3.2" ry="6.5"/>
+    <ellipse cx="76" cy="95" rx="3.2" ry="6" transform="rotate(35 76 95)"/>
+  </g>
+</svg>

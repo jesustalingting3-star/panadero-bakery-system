@@ -8,3 +8,64 @@
 .reservation-button:hover {
     background-color: #5FA7F5;
 }
+
+/* Text-fit safeguards */
+.checkout-form,.checkout-summary,.choice,.summary-item>*{min-width:0}
+.choice span,.choice strong,.summary-item span,.summary-item strong{overflow-wrap:break-word;word-break:normal}
+.summary-item>:last-child{white-space:nowrap;flex:0 0 auto}
+.checkout-summary .summary-row>:last-child{white-space:nowrap;flex:0 0 auto}
+@media(max-width:520px){.checkout-form,.checkout-summary{padding:22px 18px}.checkout-form h2,.checkout-summary h2{font-size:21px}}
+
+
+/* Saved addresses */
+.saved-address-section{display:grid;gap:10px;margin-bottom:14px;padding:14px;border:1px solid #e2d2bd;border-radius:7px;background:#fffdf8}
+.saved-address-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.saved-address-heading>label{font-weight:700;font-size:14px}
+.saved-address-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.text-button{border:0;background:transparent;color:#9a5718;font-weight:700;font-size:13px;padding:2px;cursor:pointer}
+.text-button:hover{color:#6f3d10}
+.saved-address-preview{padding:10px 12px;border-radius:6px;background:#f7eddd;color:#523622;font-size:13px;line-height:1.45}
+.address-dialog{width:min(680px,calc(100% - 30px));max-height:88vh;margin:auto;padding:0;border:1px solid #e9ddcc;border-radius:10px;background:#fff;color:#523622;box-shadow:0 24px 70px rgba(82,54,34,.22)}
+.address-dialog::backdrop{background:rgba(53,35,23,.5)}
+.address-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 22px;border-bottom:1px solid #e9ddcc}
+.address-dialog-header h2{font-size:23px;line-height:1.2}
+.address-dialog-close{width:38px;height:38px;border:0;border-radius:50%;background:#f5ead7;color:#523622;font-size:24px;line-height:1;cursor:pointer}
+.address-dialog-body{padding:22px}
+.address-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.address-form-group{display:grid;gap:6px;min-width:0}
+.address-form-group.full{grid-column:1/-1}
+.address-form-group label{font-size:13px;font-weight:700}
+.address-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;flex-wrap:wrap}
+.address-list{display:grid;gap:12px}
+.address-card{border:1px solid #e9ddcc;border-radius:8px;padding:14px;background:#fffdf8;display:grid;gap:9px}
+.address-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.address-card-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.address-default-badge{display:inline-flex;padding:3px 7px;border-radius:999px;background:#fff1ca;color:#7a5710;font-size:11px;font-weight:800}
+.address-card p{font-size:13px;color:#75604e;overflow-wrap:break-word}
+.address-card-actions{display:flex;gap:8px;flex-wrap:wrap}
+.address-mini-button{border:1px solid #d5bea1;border-radius:5px;background:#fff;color:#523622;padding:7px 10px;font-weight:700;font-size:12px;cursor:pointer}
+.address-mini-button:hover{background:#f5ead7}
+.address-mini-button.danger{border-color:#b04a40;color:#972d25}
+.address-mini-button.danger:hover{background:#972d25;color:#fff}
+.address-dialog-message{min-height:22px;margin-top:12px;font-size:13px;font-weight:700}
+.address-dialog-message.error{color:#a12b20}
+.address-dialog-message.success{color:#2f7a3f}
+.address-empty{text-align:center;color:#75604e;padding:22px 8px}
+@media(max-width:620px){
+  .saved-address-heading{align-items:flex-start;flex-direction:column}
+  .address-form-grid{grid-template-columns:1fr}
+  .address-form-group.full{grid-column:auto}
+  .address-dialog-actions{flex-direction:column-reverse}
+  .address-dialog-actions .button{width:100%}
+}
+
+/* Payment choices */
+.payment-choice-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.payment-choice-grid .choice{align-items:center}
+@media(max-width:620px){.payment-choice-grid{grid-template-columns:1fr}}
+
+/* Philippine saved-address form */
+.address-location-status{min-height:18px;margin:0;color:#75604e;font-size:12px;font-weight:700}
+.address-location-status.error{color:#9b3b31}
+#address-country[readonly]{background:#f8f2e8;color:#6c5848}
+.address-form-group select.field:disabled{background:#f8f2e8;color:#8b7b6d;cursor:not-allowed}

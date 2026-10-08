@@ -1,6 +1,6 @@
 # PANADERO Baking System
 
-The original HTML and CSS designs are preserved. The customer, staff, and admin JavaScript now use the Node.js API in `server.js`.
+The updated customer, staff, and admin visual assets are included while the API-connected JavaScript remains backed by the local MySQL database. This package is intended to run on a laptop with Node.js and MySQL; it does not require Vercel or an internet connection for the bakery system itself.
 
 ## Setup
 
@@ -24,7 +24,7 @@ The original HTML and CSS designs are preserved. The customer, staff, and admin 
    Demo accounts for local testing:
    - Staff: `staff@panadero.local` / `Staff123!`
    - Admin: `admin@panadero.local` / `Admin123!`
-   - Customer: create one from `/customer/login.html`
+   - Customer: create one from `/customer/signup.html` or `/customer/login.html`
 
 5. Open:
    - Customer: `http://localhost:3000/customer/index.html`
@@ -45,3 +45,10 @@ Staff and admin pages redirect to the role login page when no valid session is p
 - Admin catalog/category/user/stock/request hydration and persistence
 
 Orders and reservations use server-side totals and product prices; browser values are not trusted for pricing.
+
+## What was merged from the October 2026 design ZIP
+
+- Updated customer, staff, and admin CSS files.
+- Updated bakery logos, product images, menu-card images, and home slides.
+- Added the customer signup page.
+- Kept the existing API-backed authentication, catalog, cart, orders, reservations, inventory, and admin/staff JavaScript so data continues to use MySQL instead of browser-only storage.

@@ -12,7 +12,10 @@
                 const response = await fetch((window.PANADERO_API || '/api') + '/catalog');
                 if (!response.ok) return false;
                 const result = await response.json();
-                data.products = result.products || [];
+                data.products = (result.products || []).map(product => ({
+                    ...product,
+                    image: product.image || (product.slug ? `assets/images/${product.slug}.jpg` : data.fallbackImage)
+                }));
                 data.categories = (result.categories || []).map(category => ({ ...category, id: categorySlug(category.name) }));
                 window.PANADERO_DATA = data;
                 return true;

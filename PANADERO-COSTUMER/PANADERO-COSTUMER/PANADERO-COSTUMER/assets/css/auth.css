@@ -1,3 +1,32 @@
 .auth-page{max-width:1150px;margin:auto;padding:50px 20px}.auth-card{display:grid;grid-template-columns:1fr 1fr;background:#fff;border:1px solid #e9ddcc;border-radius:8px;padding:40px 20px}.auth-col{padding:0 30px}.auth-col+.auth-col{border-left:1px solid #e9ddcc}.auth-col h1,.auth-col h2{font-size:28px;line-height:1.2;margin-bottom:6px}.auth-form{display:grid;gap:16px;margin-top:28px}.forgot{justify-self:end;color:#a65d16;font-weight:700}.legal{max-width:390px;margin:22px auto 0;color:#75604e;font-size:14px;text-align:center}.checks{display:grid;gap:14px;margin-top:10px}.check{display:flex;gap:10px;align-items:flex-start;color:#75604e;font-size:14px}.check input{margin-top:4px}.auth-message{min-height:24px;font-weight:700;text-align:center}.auth-message.error{color:#a12b20}.auth-message.info{color:#75604e}@media(max-width:860px){.auth-card{grid-template-columns:1fr;padding:30px 10px}.auth-col+.auth-col{margin-top:32px;padding-top:32px;border-left:0;border-top:1px solid #e9ddcc}}@media(max-width:520px){.auth-col{padding:0 12px}}
 
 .auth-message.success{color:#2f7a42}
+
+.auth-card-single{grid-template-columns:1fr;max-width:580px;margin:0 auto}
+.auth-card-single .auth-col{border:0}
+.auth-card-signup{max-width:760px}
+.auth-switch{text-align:center;margin-top:22px;color:#75604e;font-size:14px}
+.auth-switch a{color:#a65d16;font-weight:700}
+
+/* Legal links */
+.legal a,.check a{color:#a65d16;font-weight:700;text-decoration:none;cursor:pointer;transition:color .2s ease,background-color .2s ease}
+.legal a:hover,.check a:hover{color:#6f3d10;background:#fff1d2}
+.legal a:focus-visible,.check a:focus-visible{outline:2px solid #f2bd45;outline-offset:3px;border-radius:2px}
+
+/* Text-fit safeguards */
+.auth-card,.auth-col,.auth-form,.form-group{min-width:0}
+.auth-col h1,.auth-col h2,.auth-switch,.legal,.check{overflow-wrap:break-word;word-break:normal}
+.auth-form .button{width:100%}
+@media(max-width:520px){.auth-col h1,.auth-col h2{font-size:25px}.legal,.check,.auth-switch{font-size:13px}}
+
+
+/* Keep long signup placeholders fully visible */
+#register-form input[name="mobile"]::placeholder{font-size:12.5px;letter-spacing:-.1px}
+@media(max-width:520px){
+  #register-form input[name="mobile"]::placeholder{font-size:11.5px}
+}
+
+
+/* Keep Philippine mobile example visible even with browser text scaling */
+#register-form input[name="mobile"]::placeholder{font-size:11.5px;letter-spacing:-.15px}
+@media(max-width:520px){#register-form input[name="mobile"]::placeholder{font-size:10.75px}}

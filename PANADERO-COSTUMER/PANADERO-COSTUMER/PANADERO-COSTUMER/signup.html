@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANADERO | Sign Up</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/auth.css">
+</head>
+<body data-page="signup">
+    <div id="site-header"></div>
+
+    <main class="auth-page">
+        <div class="auth-card auth-card-single auth-card-signup">
+            <section class="auth-col">
+                <h1>Sign Up</h1>
+
+                <form id="register-form" class="auth-form" novalidate>
+                    <div class="field-row">
+                        <input class="field" name="first_name" placeholder="First Name" autocomplete="given-name" maxlength="50" pattern="[A-Za-zÑñÀ-ÖØ-öø-ÿ' -]{2,50}" title="Use letters only." required>
+                        <input class="field" name="last_name" placeholder="Last Name" autocomplete="family-name" maxlength="50" pattern="[A-Za-zÑñÀ-ÖØ-öø-ÿ' -]{2,50}" title="Use letters only." required>
+                    </div>
+
+                    <div class="field-row">
+                        <input class="field" name="email" type="email" placeholder="Email Address" autocomplete="email" required>
+                        <input class="field" name="mobile" type="tel" inputmode="numeric" placeholder="Mobile No. (09XXXXXXXXX)" autocomplete="tel" minlength="11" maxlength="11" pattern="09[0-9]{9}" title="Enter an 11-digit Philippine mobile number starting with 09." required>
+                    </div>
+
+                    <div class="field-row">
+                        <input class="field" id="reg-password" name="password" type="password" placeholder="Password" autocomplete="new-password" minlength="8" required>
+                        <input class="field" id="confirm-password" name="confirm_password" type="password" placeholder="Confirm Password" autocomplete="new-password" minlength="8" required>
+                    </div>
+
+                    <div class="checks">
+                        <label class="check">
+                            <input type="checkbox" name="terms" required>
+                            <span>I agree to the <a href="terms.html">Terms and Conditions</a> and <a href="privacy.html">Privacy Policy</a>.</span>
+                        </label>
+                        <label class="check">
+                            <input type="checkbox" name="promos">
+                            <span>I want to receive promos and discounts on my email.</span>
+                        </label>
+                    </div>
+
+                    <p id="register-message" class="auth-message" role="status"></p>
+                    <button class="button" type="submit">Sign Up</button>
+                </form>
+
+                <p class="auth-switch">Already have an account? <a href="login.html">Log In</a></p>
+            </section>
+        </div>
+    </main>
+
+    <div id="site-footer"></div>
+
+    <script src="assets/js/products.js" defer></script>
+    <script src="assets/js/product-service.js" defer></script>
+    <script src="assets/js/auth-service.js" defer></script>
+    <script src="assets/js/navigation.js" defer></script>
+    <script src="assets/js/cart.js" defer></script>
+    <script src="assets/js/auth.js" defer></script>
+</body>
+</html>
