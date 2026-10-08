@@ -48,6 +48,14 @@ if not exist ".env" (
 )
 
 echo [2/5] Checking MySQL and importing the database...
+"%MYSQL%" --protocol=tcp -h 127.0.0.1 -P 3306 -u root -e "SELECT 1" >nul 2>nul
+if errorlevel 1 (
+  echo MySQL is not responding. Trying common local services...
+  sc query MySQL80 >nul 2>&1 && net start MySQL80 >nul 2>&1
+  sc query MySQL >nul 2>&1 && net start MySQL >nul 2>&1
+  if exist "C:\xampp\mysql_start.bat" start "" /min "C:\xampp\mysql_start.bat"
+  timeout /t 5 /nobreak >nul
+)
 "%MYSQL%" --protocol=tcp -h 127.0.0.1 -P 3306 -u root < "Arambulo-and-galvez.sql" >nul 2>nul
 if errorlevel 1 (
   echo.
