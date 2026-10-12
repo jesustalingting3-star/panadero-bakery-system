@@ -1,4 +1,5 @@
 (async function () {
+    const safeHtml = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
     const list = document.getElementById('cart-page-items');
     const empty = document.getElementById('cart-page-empty');
     const layout = document.getElementById('cart-layout');
@@ -18,7 +19,7 @@
             const max = entry.maxQuantity > 0 ? entry.maxQuantity : 99;
             const row = document.createElement('article');
             row.className = 'cart-page-item';
-            row.innerHTML = `<img src="${entry.product.image}" alt="${entry.product.name}"><div><h2><a href="product.html?slug=${encodeURIComponent(entry.product.slug)}">${entry.product.name}</a></h2><p class="unit-price">${ProductService.formatPrice(entry.product.price)} each</p><div class="quantity-controls"><button type="button" class="dec" aria-label="Decrease ${entry.product.name} quantity">−</button><label class="visually-hidden" for="cart-${entry.product.id}">Quantity</label><input id="cart-${entry.product.id}" type="number" min="1" max="${max}" value="${entry.quantity}"><button type="button" class="inc" aria-label="Increase ${entry.product.name} quantity">+</button></div><button type="button" class="remove-cart-item">Remove</button></div><strong class="cart-item-total">${ProductService.formatPrice(entry.lineTotal)}</strong>`;
+            row.innerHTML = `<img src="${safeHtml(entry.product.image)}" alt="${safeHtml(entry.product.name)}"><div><h2><a href="product.html?slug=${encodeURIComponent(entry.product.slug)}">${safeHtml(entry.product.name)}</a></h2><p class="unit-price">${ProductService.formatPrice(entry.product.price)} each</p><div class="quantity-controls"><button type="button" class="dec" aria-label="Decrease ${safeHtml(entry.product.name)} quantity">−</button><label class="visually-hidden" for="cart-${entry.product.id}">Quantity</label><input id="cart-${entry.product.id}" type="number" min="1" max="${max}" value="${entry.quantity}"><button type="button" class="inc" aria-label="Increase ${safeHtml(entry.product.name)} quantity">+</button></div><button type="button" class="remove-cart-item">Remove</button></div><strong class="cart-item-total">${ProductService.formatPrice(entry.lineTotal)}</strong>`;
 
             const input = row.querySelector('input');
             row.querySelector('.dec').addEventListener('click', function () {

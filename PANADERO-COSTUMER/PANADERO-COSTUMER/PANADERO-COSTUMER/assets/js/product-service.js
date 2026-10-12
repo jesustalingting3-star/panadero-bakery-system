@@ -1,5 +1,11 @@
 (function () {
     const data = window.PANADERO_DATA || { products: [], categories: [], fallbackImage: '' };
+    // Database products have numeric IDs and generated slugs, which do not always
+    // match the image filenames in assets (e.g. Pan de Sal -> pandesal.jpg).
+    // Match the existing local catalog by product name before falling back.
+    const imageKey = value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const imagesByName = new Map(data.products.map(product => [imageKey(product.name), product.image]));
+    const imagesBySlug = new Map(data.products.map(product => [product.slug, product.image]));
     const categorySlug = value => { const slug = String(value || '').toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); return ({ breads: 'bread', cakes: 'cake', doughnuts: 'doughnut', pies: 'pie' }[slug] || slug); };
     const byId = id => data.products.find(product => String(product.id) === String(id)) || null;
     const bySlug = slug => data.products.find(product => product.slug === String(slug)) || null;
@@ -14,7 +20,7 @@
                 const result = await response.json();
                 data.products = (result.products || []).map(product => ({
                     ...product,
-                    image: product.image || (product.slug ? `assets/images/${product.slug}.jpg` : data.fallbackImage)
+                    image: product.image || imagesByName.get(imageKey(product.name)) || imagesBySlug.get(product.slug) || data.fallbackImage
                 }));
                 data.categories = (result.categories || []).map(category => ({ ...category, id: categorySlug(category.name) }));
                 window.PANADERO_DATA = data;

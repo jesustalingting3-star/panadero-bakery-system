@@ -1,4 +1,5 @@
 (function () {
+    const safeHtml = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
     const buttons = [...document.querySelectorAll('.tab-button')];
     const panels = [...document.querySelectorAll('.records-panel')];
     const signin = document.getElementById('signin-state');
@@ -29,6 +30,7 @@
     const pageParams = new URLSearchParams(window.location.search);
     const requestedTab = pageParams.get('tab');
     const requestedReference = pageParams.get('ref');
+    let showNewReceipt = pageParams.get('receipt') === '1';
     activate(requestedTab === 'reservations' ? 'reservations' : 'orders');
 
     function getReference(record, type) {
@@ -61,10 +63,13 @@
                 const paymentLabel = type === 'order' && record.paymentMethod
                     ? { cash: 'Cash', card: 'Card', gcash: 'GCash' }[record.paymentMethod] || record.paymentMethod
                     : '';
-                card.innerHTML = `<div class="record-top"><div><strong>${type === 'order' ? 'Order' : 'Reservation'}${reference ? ' ' + reference : ''}</strong><p class="record-meta">${dateText}${paymentLabel ? ' • Payment: ' + paymentLabel : ''}</p></div><span class="record-status">${record.status || ''}</span></div>${canCancel ? '<div class="record-actions"><button type="button" class="record-cancel-button">Cancel Order</button></div>' : ''}`;
+                card.innerHTML = `<div class="record-top"><div><strong>${type === 'order' ? 'Order' : 'Reservation'}${reference ? ' ' + safeHtml(reference) : ''}</strong><p class="record-meta">${safeHtml(dateText)}${paymentLabel ? ' • Payment: ' + safeHtml(paymentLabel) : ''}</p></div><span class="record-status">${safeHtml(record.status || '')}</span></div>${type === 'order' ? '<div class="record-actions"><button type="button" class="record-receipt-button">View Receipt</button>' + (canCancel ? '<button type="button" class="record-cancel-button">Cancel Order</button>' : '') + '</div>' : ''}`;
                 if (requestedReference && reference && String(reference) === requestedReference) {
                     card.setAttribute('aria-current', 'true');
                 }
+
+                const receiptButton = card.querySelector('.record-receipt-button');
+                if (receiptButton && window.OrderReceipt) receiptButton.addEventListener('click', () => OrderReceipt.open(record));
 
                 const cancelButton = card.querySelector('.record-cancel-button');
                 if (cancelButton) {
@@ -81,7 +86,9 @@
                         if (!confirmed) return;
 
                         cancelButton.disabled = true;
-                        const result = await OrderService.cancelOrder(record.id);
+                        let result;
+                        try { result = await OrderService.cancelOrder(record.id); }
+                        catch (_) { result = {ok:false,message:'Unable to cancel order. Try again.'}; }
                         setMessage(result.ok ? 'Order cancelled.' : result.message, result.ok ? 'success' : 'error');
                         if (result.ok) await load();
                         else cancelButton.disabled = false;
@@ -93,7 +100,7 @@
             empty.hidden = shown.length > 0;
         }
 
-        filter.addEventListener('change', draw);
+        filter.onchange = draw;
         draw();
     }
 
@@ -112,6 +119,16 @@
             ReservationService.getReservations()
         ]);
         render(orders, 'orders-list', 'orders-empty', 'order-filter', 'order');
+        if (showNewReceipt && requestedReference && window.OrderReceipt) {
+            const placedOrder = orders.find(order => getReference(order, 'order') === requestedReference);
+            if (placedOrder) {
+                showNewReceipt = false;
+                OrderReceipt.open(placedOrder);
+                const currentUrl = new URL(location.href);
+                currentUrl.searchParams.delete('receipt');
+                history.replaceState({}, '', currentUrl.href);
+            }
+        }
         render(reservations, 'reservations-list', 'reservations-empty', 'reservation-filter', 'reservation');
     }
 

@@ -6,16 +6,16 @@ PANADERO is a local-laptop bakery management system with three role-based portal
 - **Staff** — manage inventory batches and update order/reservation statuses.
 - **Admin** — manage the catalog, users, stock, and requests.
 
-The frontend design is preserved in the role folders. The frontend communicates with the Node.js/Express API, and all business data is stored in MySQL.
+The frontend communicates with the Node.js/Express API. Accounts, product catalog, inventory, orders, checkout method/address, selected payment method, reservations, customer notifications, and admin changes are stored in MySQL. Customer saved-address presets and some convenience preferences remain in browser storage.
 
 ## Quick start on Windows
 
-1. Install Node.js LTS and MySQL or XAMPP.
-2. Start MySQL if it is not running.
+1. Install Node.js LTS and XAMPP (with MariaDB).
+2. Start MySQL from the **XAMPP Control Panel**. Do not start another MySQL service on port 3306.
 3. Double-click `PANADERO-ONE-CLICK.bat`.
-4. Wait for the browser to open `http://localhost:3000/login.html`.
+4. Wait for the browser to open `http://localhost:3000/customer/login.html`.
 
-The launcher imports `database/panadero.sql`, creates `.env` from `.env.example` when needed, installs dependencies, starts the server, waits for `/api/health`, and opens the login page.
+The launcher checks that port 3306 really belongs to `C:\xampp\mysql\data`, backs up an existing `panadero_bakery` database before any import, imports the non-destructive `database/panadero.sql` schema, updates local `.env`, installs Node packages if needed, starts PANADERO, checks `/api/health`, and opens the Customer login page. **It never starts/stops/repairs XAMPP MySQL.**
 
 ## Manual setup
 
@@ -30,7 +30,7 @@ Set the MySQL credentials in `.env`. Never commit `.env` because it contains the
 
 ## Portal URLs
 
-- Login: `http://localhost:3000/login.html`
+- Login: `http://localhost:3000/customer/login.html`
 - Customer: `http://localhost:3000/customer/index.html`
 - Customer signup: `http://localhost:3000/customer/signup.html`
 - Staff: `http://localhost:3000/staff/staff-dashboard.html`
@@ -51,13 +51,7 @@ Set the MySQL credentials in `.env`. Never commit `.env` because it contains the
 - Staff inventory stock updates, batch recording, request listing, and status updates
 - Admin catalog/category/user/stock/request hydration and persistence
 
-The server performs a safe startup migration for compatibility and seeds the initial categories, products, and demo staff/admin accounts when the database is empty.
-
-## CCS110 Submission PDFs
-
-- [System Overview and Requirements](02_Documentation/System_Overview_and_Requirements.pdf)
-- [System Features Documentation](02_Documentation/System_Features_Documentation.pdf)
-- [Database Design and SQL Queries](02_Documentation/Database_Design_and_SQL_Queries.pdf)
+The server adds missing checkout/contact columns to existing databases without resetting records. On a first database initialization it seeds the initial catalog with **0 stock** and demo Staff/Admin accounts. Enter actual stock through Staff/Admin before testing checkout. A seed marker prevents deleted demo rows from returning on every restart. See `docs/AUDIT-REPORT.md` for verification and remaining limitations.
 
 ## Repository organization
 
@@ -68,11 +62,11 @@ PANADERO/
 ├── PANADERO-ADMIN/          Admin portal source and assets
 ├── database/panadero.sql    Canonical complete MySQL schema
 ├── docs/                    ERD, master book, guides, and defense reviewer
-├── login.html               Root role-selection/login page
+├── login.html               Compatibility redirect only (no second login form)
 ├── server.js                Node.js/Express API and static-file server
 ├── PANADERO-ONE-CLICK.bat   Windows local launcher
 ├── .env.example             Safe configuration template
 └── package.json             Node.js dependencies and scripts
 ```
 
-See `docs/PANADERO-System-Documentation.docx` (editable Word copy), `docs/PANADERO-System-Documentation.pdf`, `docs/PANADERO-ERD.mmd`, `docs/PANADERO-LOCAL-ERD-UPDATED.md`, `docs/REPOSITORY-STRUCTURE.md`, and `LOCAL-SETUP.md` for detailed documentation.
+See `docs/PANADERO-LOCAL-ERD-UPDATED.md`, `docs/REPOSITORY-STRUCTURE.md`, and `LOCAL-SETUP.md` for detailed documentation.

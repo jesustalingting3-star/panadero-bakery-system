@@ -1,7 +1,13 @@
 (function () {
+    const safeHtml = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
     const KEY = 'panadero-cart';
     const MAX = 99;
     let storageAvailable = true;
+
+    // A cart entry is stored by its original product ID plus stable name/slug.
+    // MySQL IDs are numeric, while the initial local catalog has slug IDs.
+    // Never throw away stored entries before the API catalog has loaded.
+    const identity = value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
     function maxForProduct(product) {
         if (product && Number.isInteger(product.stock) && product.stock >= 0) {
@@ -13,33 +19,56 @@
     function normalize(raw) {
         if (!Array.isArray(raw)) return [];
         const out = [];
-
         for (const entry of raw) {
-            const id = entry && String(entry.productId || entry.id || '');
-            const product = ProductService.getProductById(id);
-            let q = Math.floor(Number(entry && entry.quantity));
-
-            if (!product || !Number.isFinite(q) || q < 1 || out.some(function (x) { return x.productId === id; })) {
-                continue;
+            if (!entry || typeof entry !== 'object') continue;
+            const id = String(entry.productId ?? entry.id ?? '').trim();
+            const quantity = Math.floor(Number(entry.quantity));
+            if (!id || !Number.isFinite(quantity) || quantity < 1) continue;
+            const previous = out.find(item => item.productId === id);
+            if (previous) {
+                previous.quantity = Math.min(MAX, previous.quantity + quantity);
+            } else {
+                out.push({
+                    productId: id,
+                    quantity: Math.min(MAX, quantity),
+                    slug: String(entry.slug || ''),
+                    name: String(entry.name || '')
+                });
             }
-
-            const stockMax = maxForProduct(product);
-            if (stockMax > 0) q = Math.min(q, stockMax);
-            else q = Math.min(q, MAX);
-
-            out.push({ productId: id, quantity: q });
         }
-
         return out;
     }
 
     function getCart() {
         try {
-            return normalize(JSON.parse(localStorage.getItem(KEY) || '[]'));
-        } catch (error) {
+            const cart = normalize(JSON.parse(localStorage.getItem(KEY) || '[]'));
+            storageAvailable = true;
+            return cart;
+        } catch (_) {
             storageAvailable = false;
             return [];
         }
+    }
+
+    function findProduct(entry) {
+        if (!entry) return null;
+        const direct = ProductService.getProductById(entry.productId);
+        if (direct) return direct;
+        const bySlug = ProductService.getProductBySlug(entry.slug || entry.productId);
+        if (bySlug) return bySlug;
+        const wanted = identity(entry.name || entry.slug || entry.productId);
+        return ProductService.getProducts().find(product =>
+            identity(product.name) === wanted || identity(product.slug) === wanted
+        ) || null;
+    }
+
+    function sameProduct(item, product) {
+        if (!product) return false;
+        if (item.productId === String(product.id)) return true;
+        const resolved = findProduct(item);
+        if (resolved) return identity(resolved.name) === identity(product.name);
+        return Boolean((item.name && identity(item.name) === identity(product.name)) ||
+            (item.slug && identity(item.slug) === identity(product.slug)));
     }
 
     function save(cart) {
@@ -47,7 +76,7 @@
         try {
             localStorage.setItem(KEY, JSON.stringify(clean));
             storageAvailable = true;
-        } catch (error) {
+        } catch (_) {
             storageAvailable = false;
         }
         notify();
@@ -57,42 +86,43 @@
     function addItem(id, quantity) {
         const product = ProductService.getProductById(id);
         if (!product || product.available === false) return false;
-
         const stockMax = maxForProduct(product);
         if (stockMax === 0) return false;
 
         const requested = Math.max(1, Math.floor(Number(quantity) || 1));
-        const q = Math.min(stockMax, requested);
         const cart = getCart();
-        const found = cart.find(function (i) { return i.productId === String(id); });
-
-        if (found) found.quantity = Math.min(stockMax, found.quantity + q);
-        else cart.push({ productId: String(id), quantity: q });
-
+        const found = cart.find(item => sameProduct(item, product));
+        if (found) {
+            found.quantity = Math.min(stockMax, found.quantity + requested);
+            found.productId = String(product.id);
+            found.slug = product.slug;
+            found.name = product.name;
+        } else {
+            cart.push({ productId: String(product.id), quantity: Math.min(stockMax, requested),
+                slug: product.slug, name: product.name });
+        }
         save(cart);
         return true;
     }
 
     function updateQuantity(id, quantity) {
-        const product = ProductService.getProductById(id);
-        if (!product) return false;
-
-        const stockMax = maxForProduct(product);
-        if (stockMax === 0) return false;
-
         const cart = getCart();
-        const found = cart.find(function (i) { return i.productId === String(id); });
+        const found = cart.find(item => item.productId === String(id));
         if (!found) return false;
-
+        const product = findProduct(found);
+        if (!product || maxForProduct(product) === 0) return false;
         let q = Math.floor(Number(quantity));
         if (!Number.isFinite(q) || q < 1) q = 1;
-        found.quantity = Math.min(stockMax, q);
+        found.quantity = Math.min(maxForProduct(product), q);
+        found.productId = String(product.id);
+        found.slug = product.slug;
+        found.name = product.name;
         save(cart);
         return true;
     }
 
     function removeItem(id) {
-        save(getCart().filter(function (i) { return i.productId !== String(id); }));
+        save(getCart().filter(item => item.productId !== String(id)));
     }
 
     function clearCart() {
@@ -100,22 +130,25 @@
     }
 
     function getCartCount() {
-        return getCart().reduce(function (sum, item) { return sum + item.quantity; }, 0);
+        return getCart().reduce((sum, item) => sum + item.quantity, 0);
     }
 
     function detailed() {
-        return getCart().map(function (item) {
-            const product = ProductService.getProductById(item.productId);
-            return product ? Object.assign({}, item, {
-                product: product,
-                lineTotal: product.price * item.quantity,
-                maxQuantity: maxForProduct(product)
-            }) : null;
+        return getCart().map(item => {
+            const product = findProduct(item);
+            if (!product) return null; // Keep the entry stored until the live catalog loads.
+            const max = maxForProduct(product);
+            return Object.assign({}, item, {
+                product,
+                quantity: max > 0 ? Math.min(item.quantity, max) : item.quantity,
+                lineTotal: product.price * (max > 0 ? Math.min(item.quantity, max) : item.quantity),
+                maxQuantity: max
+            });
         }).filter(Boolean);
     }
 
     function getSubtotal() {
-        return detailed().reduce(function (sum, item) { return sum + item.lineTotal; }, 0);
+        return detailed().reduce((sum, item) => sum + item.lineTotal, 0);
     }
 
     function notify() {
@@ -125,21 +158,21 @@
 
     function updateCounts() {
         const count = getCartCount();
-        document.querySelectorAll('.cart-count').forEach(function (el) { el.textContent = count; });
+        document.querySelectorAll('.cart-count').forEach(el => { el.textContent = count; });
     }
 
     window.CartService = {
-        getCart: getCart,
-        addItem: addItem,
-        updateQuantity: updateQuantity,
-        removeItem: removeItem,
-        clearCart: clearCart,
-        getCartCount: getCartCount,
+        getCart,
+        addItem,
+        updateQuantity,
+        removeItem,
+        clearCart,
+        getCartCount,
         getDetailedCart: detailed,
-        getSubtotal: getSubtotal,
+        getSubtotal,
         formatPrice: ProductService.formatPrice,
         storageKey: KEY,
-        isStorageAvailable: function () { return storageAvailable; }
+        isStorageAvailable: () => storageAvailable
     };
 
     function buildDrawer() {
@@ -170,7 +203,7 @@
             const row = document.createElement('div');
             row.className = 'drawer-item';
             const max = entry.maxQuantity > 0 ? entry.maxQuantity : MAX;
-            row.innerHTML = `<img src="${entry.product.image}" alt="${entry.product.name}"><div><h3><a href="product.html?slug=${encodeURIComponent(entry.product.slug)}">${entry.product.name}</a></h3><p>${ProductService.formatPrice(entry.product.price)} each</p><label class="visually-hidden" for="drawer-${entry.product.id}">Quantity for ${entry.product.name}</label><input id="drawer-${entry.product.id}" type="number" min="1" max="${max}" value="${entry.quantity}"><button class="remove-link" type="button">Remove</button></div><strong>${ProductService.formatPrice(entry.lineTotal)}</strong>`;
+            row.innerHTML = `<img src="${safeHtml(entry.product.image)}" alt="${safeHtml(entry.product.name)}"><div><h3><a href="product.html?slug=${encodeURIComponent(entry.product.slug)}">${safeHtml(entry.product.name)}</a></h3><p>${ProductService.formatPrice(entry.product.price)} each</p><label class="visually-hidden" for="drawer-${entry.product.id}">Quantity for ${safeHtml(entry.product.name)}</label><input id="drawer-${entry.product.id}" type="number" min="1" max="${max}" value="${entry.quantity}"><button class="remove-link" type="button">Remove</button></div><strong>${ProductService.formatPrice(entry.lineTotal)}</strong>`;
             row.querySelector('input').addEventListener('change', function (event) {
                 updateQuantity(entry.productId, event.target.value);
                 renderDrawer();
@@ -202,6 +235,7 @@
     }
 
     function openDrawer() {
+        ProductService.refreshProducts().then(notify).catch(() => {});
         buildDrawer();
         renderDrawer();
         const d = document.getElementById('cart-drawer');
@@ -225,5 +259,6 @@
         if (document.getElementById('cart-drawer')?.open) renderDrawer();
     });
     document.addEventListener('DOMContentLoaded', updateCounts);
+    ProductService.refreshProducts().then(notify).catch(() => {});
     if (document.readyState !== 'loading') updateCounts();
 })();

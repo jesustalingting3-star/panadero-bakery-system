@@ -13,7 +13,7 @@
 3. The launcher imports `database/panadero.sql`, installs Node packages, starts the server, checks the database health endpoint, and opens the login page.
 4. Use `http://localhost:3000/customer/login.html`.
 
-The launcher searches for MySQL in PATH, XAMPP, and common MySQL installation folders. If the root account has a password, it asks for it during setup. The launcher preserves an existing `.env` file.
+The safe launcher requires the XAMPP MySQL client at `C:\xampp\mysql\bin\mysql.exe` and verifies that the server uses `C:\xampp\mysql\data`. It prompts for a MySQL root password if needed, backs up an existing `panadero_bakery` database before schema import, and writes the local `.env` connection settings. It does **not** start, stop, repair, or reconfigure XAMPP.
 
 The launcher requires Node.js to already be installed. It cannot install Node.js or MySQL.
 
@@ -51,6 +51,10 @@ Do not share or commit `.env`.
 - Staff: `http://localhost:3000/staff/staff-dashboard.html`
 - Admin: `http://localhost:3000/admin/admin.html`
 
+## Initial inventory
+
+New databases start with **0 stock** per catalog product. Staff/Admin must enter stock or record a fresh batch before customers can place orders. Existing stock is never reset by the migration.
+
 ## Demo accounts
 
 - Staff: `staff@panadero.local` / `Staff123!`
@@ -60,7 +64,7 @@ Do not share or commit `.env`.
 ## Troubleshooting
 
 - If `/api/health` reports a database error, confirm that MySQL is running and that `.env` matches the MySQL account.
-- If port 3000 is busy, close the other Node.js process or change `PORT` in `.env` and update the URL.
+- If port 3000 is busy, stop the earlier PANADERO Node.js terminal with Ctrl+C and relaunch. The BAT deliberately does not kill or reuse an unrelated process.
 - Keep the server terminal open while using the portals.
 
 All active portal files are under `PANADERO-COSTUMER`, `PANADERO-STAFF`, and `PANADERO-ADMIN`. The old duplicate `apps/` prototype and role ZIP archives are not part of the organized repository.

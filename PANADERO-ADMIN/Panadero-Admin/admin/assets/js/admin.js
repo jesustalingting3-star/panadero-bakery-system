@@ -66,7 +66,7 @@
     function persist() {
         sessionStorage.setItem(SHARED_KEY, JSON.stringify(shared));
         sessionStorage.setItem(ADMIN_KEY, JSON.stringify(admin));
-        syncServer();
+        // Database changes are handled by explicit authenticated API actions.
     }
 
     // Run a change; if the browser can't store it, roll back (same behavior as the Staff data layer).
@@ -189,7 +189,7 @@
         const form = $('dialog-form');
         $('dialog-x').addEventListener('click', closeDialog);
         $('dialog-cancel').addEventListener('click', closeDialog);
-        form.addEventListener('submit', event => {
+        form.addEventListener('submit', async event => {
             event.preventDefault();
             if (!form.reportValidity()) return;
             const values = {};
@@ -197,9 +197,15 @@
                 const raw = form.elements[f.key].value;
                 values[f.key] = f.type === 'number' ? (raw === '' ? NaN : Number(raw)) : raw.trim();
             });
-            const error = o.onSubmit ? o.onSubmit(values) : null;
-            if (error) { $('dialog-message').textContent = error; return; }
-            closeDialog();
+            const submit = form.querySelector('button[type="submit"]');
+            submit.disabled = true;
+            try {
+                const error = o.onSubmit ? await o.onSubmit(values) : null;
+                if (error) { $('dialog-message').textContent = error; return; }
+                closeDialog();
+            } catch (error) {
+                $('dialog-message').textContent = error.message || 'Unable to save changes.';
+            } finally { submit.disabled = false; }
         });
 
         if (typeof dialog.showModal === 'function') dialog.showModal();
@@ -208,7 +214,7 @@
 
     const confirmBox = (heading, message, label, onYes) => openForm({
         eyebrow: 'Confirm', title: heading, message, submit: label, danger: true,
-        onSubmit: () => { onYes(); }
+        onSubmit: async () => { await onYes(); }
     });
 
     dialog.addEventListener('click', e => { if (e.target === dialog) closeDialog(); });
@@ -283,7 +289,7 @@
                     <td>${fmtDT(i.updatedAt)}</td>
                     <td><div class="row-actions"><button class="admin-small-button" type="button" data-action="edit-product">Edit</button><button class="admin-small-button danger" type="button" data-action="delete-product">Delete</button></div></td></tr>`;
             }), 'No products match the selected filters.'),
-        after: () => panel('Recent Baking Batches', 'Fresh batches recorded during this browser session.',
+        after: () => panel('Recent Baking Batches', 'Fresh batches recorded in inventory.',
             shared.batches.length ? `<div class="batch-list">${shared.batches.slice(0, 10).map(b => {
                 const [label, cls] = batchState(b);
                 return `<article class="batch-row" data-id="${escapeHtml(b.id)}">
@@ -338,7 +344,7 @@
                         <td><div class="order-items">${(r.items || []).map(i => escapeHtml(productName(i)) + ' × ' + escapeHtml(i.quantity)).join('<br>')}</div></td>
                         <td>${scheduleText(r)}</td><td><strong>${money(r.total)}</strong></td><td>${badge(r.status, r.status)}</td>
                         <td><div class="stock-editor"><select class="admin-field compact record-status-select" aria-label="Status for ${escapeHtml(refNo(r))}"${open ? '' : ' disabled'}>${statusOptions(r)}</select><button class="admin-small-button" type="button" data-action="save-status"${r.status === 'completed' || r.status === 'cancelled' ? ' disabled' : ''}>Save</button></div></td>
-                        <td><div class="row-actions">${open ? '<button class="admin-small-button danger" type="button" data-action="cancel-record">Cancel</button>' : '<button class="admin-small-button danger" type="button" data-action="delete-record">Delete</button>'}</div></td></tr>`;
+                        <td><div class="row-actions">${open ? '<button class="admin-small-button danger" type="button" data-action="cancel-record">Cancel</button>' : r.status === 'cancelled' ? '<button class="admin-small-button danger" type="button" data-action="delete-record">Delete</button>' : '—'}</div></td></tr>`;
                 });
             return table(['Reference', 'Customer', 'Products', 'Details', 'Total', 'Status', 'Update', 'Admin'], rows, 'No orders or reservations match the selected filters.');
         }
@@ -387,7 +393,7 @@
     V.users = () => ({
         title: 'User Accounts', sub: 'Manage Admin, Staff, and Customer accounts.',
         action: '<button class="admin-primary" type="button" data-action="add-user">+ Add User</button>',
-        panel: ['Accounts', 'Frontend-only list. Real sign-in is handled by the shared login once the backend is connected.'],
+        panel: ['Accounts', 'Accounts created here are saved to MySQL and can sign in immediately.'],
         table: () => table(['Name', 'Email', 'Role', 'Manage'], admin.users.map(u =>
             `<tr data-id="${escapeHtml(u.id)}"><td><strong>${escapeHtml(u.name)}</strong></td><td>${escapeHtml(u.email)}</td>
              <td><select class="admin-field compact" data-change="set-role" aria-label="Role for ${escapeHtml(u.name)}">${options(ROLES, u.role)}</select></td>
@@ -411,7 +417,7 @@
                 ['Top Seller', top ? `${top[0]} (${top[1]})` : '—', 'by pieces sold', true]
             ]);
         },
-        panel: ['Activity Log', 'Most recent admin actions in this browser session.'],
+        panel: ['Activity Log', 'Recent administrator actions saved in MySQL.'],
         toolbar: () => toolbar('cols-search-btn', searchBox('Search activity log...', 'Search activity log') +
             '<button class="admin-small-button danger" type="button" data-action="reset-data">Reset frontend data</button>'),
         table: () => {
@@ -521,263 +527,164 @@
     /* ---------- Actions ---------- */
     const A = {};
 
-    /* Batches & stock */
+    /* ---------- Database-backed Admin actions ---------- */
+    const apiRoot = (window.PANADERO_API || '/api');
+    const authHeaders = () => ({'Content-Type':'application/json', Authorization:'Bearer '+(localStorage.getItem('panadero-api-token') || '')});
+    const imageId = value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const originalImages = new Map(DATA.products.map(p => [imageId(p.name),p.image]));
+
+    async function reloadDatabase() {
+        const response = await fetch(apiRoot + '/admin/state', {headers:authHeaders(),cache:'no-store'});
+        const state = await response.json();
+        if (!response.ok || !state.ok) throw new Error(state.message || 'Could not load database changes.');
+        admin.categories = state.categories || [];
+        admin.products = (state.products || []).map(p => ({
+            id:String(p.id), name:p.name, category:String(p.categoryId || p.category),
+            price:Number(p.price), image:p.image || originalImages.get(imageId(p.name)) || DATA.fallbackImage
+        }));
+        admin.users = (state.users || []).map(user => ({...user, id:String(user.id), name:user.displayName || user.name || user.email}));
+        admin.logs = state.logs || [];
+        shared.orders = (state.orders || []).map(canonical);
+        shared.reservations = (state.reservations || []).map(canonical);
+        shared.batches = state.batches || [];
+        shared.stocks = {};
+        (state.products || []).forEach(p => {
+            if (Number.isInteger(p.stock)) shared.stocks[String(p.id)] = {stock:p.stock,updatedAt:null};
+        });
+        render();
+    }
+
+    async function executeAction(action, data, message) {
+        const response = await fetch(apiRoot + '/admin/action', {method:'POST',headers:authHeaders(),body:JSON.stringify({action,data})});
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.message || 'Unable to save changes.');
+        await reloadDatabase();
+        if (message) toast(message);
+    }
+
     A['add-batch'] = () => {
         if (!admin.products.length) return toast('Add a product first.', true);
         openForm({
-            eyebrow: 'Inventory', title: 'Add Fresh Batch', submit: 'Save Batch',
-            fields: [
-                { key: 'productId', label: 'Product', type: 'select', full: true, options: admin.products.map(p => [p.id, p.name]) },
-                { key: 'quantity', label: 'Quantity Baked', type: 'number', min: 1, step: 1, required: true },
-                { key: 'bakedDate', label: 'Baked Date', type: 'date', value: today(), max: today(), required: true },
-                { key: 'expirationDate', label: 'Expiration Date', type: 'date', value: addDays(2), required: true },
-                { key: 'notes', label: 'Notes (Optional)', type: 'textarea', full: true }
+            eyebrow:'Inventory',title:'Add Fresh Batch',submit:'Save Batch',
+            fields:[
+                {key:'productId',label:'Product',type:'select',full:true,options:admin.products.map(p=>[p.id,p.name])},
+                {key:'quantity',label:'Quantity Baked',type:'number',min:1,step:1,required:true},
+                {key:'bakedDate',label:'Baked Date',type:'date',value:today(),max:today(),required:true},
+                {key:'expirationDate',label:'Expiration Date',type:'date',value:addDays(2),required:true},
+                {key:'notes',label:'Notes (Optional)',type:'textarea',full:true}
             ],
-            onSubmit: v => {
-                const p = product(v.productId);
-                if (!p || !Number.isSafeInteger(v.quantity) || v.quantity < 1 || v.quantity > MAX_STOCK) return 'Choose a product and enter a whole quantity from 1 to 1,000,000.';
-                if (!validDate(v.bakedDate) || !validDate(v.expirationDate)) return 'Enter valid baked and expiration dates.';
-                if (v.bakedDate > today()) return 'The baked date cannot be later than today.';
-                if (v.expirationDate < v.bakedDate) return 'The expiration date cannot be earlier than the baked date.';
-                const current = shared.stocks[p.id] ? shared.stocks[p.id].stock : 0;
-                if (current + v.quantity > MAX_STOCK) return 'Total stock cannot exceed 1,000,000.';
-                const ok = mutate(() => {
-                    shared.batches.unshift({ id: makeId('batch'), productId: p.id, productName: p.name, quantity: v.quantity, bakedDate: v.bakedDate, expirationDate: v.expirationDate, notes: v.notes.slice(0, 500) });
-                    shared.stocks[p.id] = { stock: current + v.quantity, updatedAt: new Date().toISOString() };
-                    log(`Added batch of ${v.quantity} × ${p.name} (expires ${v.expirationDate})`);
-                });
-                if (!ok) return 'Unable to save this batch.';
-                commit(`Batch recorded – ${p.name} stock is now ${current + v.quantity}`);
+            onSubmit:async v=>{
+                if (!product(v.productId) || !Number.isSafeInteger(v.quantity) || v.quantity < 1 || v.quantity > MAX_STOCK) return 'Choose a product and valid quantity.';
+                if (!validDate(v.bakedDate) || !validDate(v.expirationDate) || v.bakedDate > today() || v.expirationDate < v.bakedDate) return 'Check the baking and expiration dates.';
+                await executeAction('add-batch',v,'Fresh batch recorded.');
             }
         });
     };
-
-    A['discard-batch'] = (id) => {
-        const b = shared.batches.find(x => x.id === id);
-        if (!b) return;
-        confirmBox('Discard batch?', `${b.quantity} × ${b.productName} will be removed and deducted from stock.`, 'Discard', () => {
-            if (mutate(() => {
-                shared.batches = shared.batches.filter(x => x.id !== id);
-                if (shared.stocks[b.productId]) shared.stocks[b.productId] = { stock: Math.max(0, shared.stocks[b.productId].stock - b.quantity), updatedAt: new Date().toISOString() };
-                log(`Discarded batch of ${b.quantity} × ${b.productName}`);
-            })) commit('Batch discarded');
-        });
+    A['discard-batch'] = id => {
+        const batch = shared.batches.find(b=>String(b.id)===String(id));
+        if (!batch) return toast('Batch not found.',true);
+        confirmBox('Discard batch?',`Discard ${batch.quantity} pcs of ${batch.productName}? Stock will be reduced if enough remains.`, 'Discard',
+            ()=>executeAction('discard-batch',{id},'Batch discarded.'));
     };
-
-    A['save-stock'] = (id, el, row) => {
+    A['save-stock'] = (id,el,row) => {
         const input = row.querySelector('.stock-input');
         const stock = Number(input.value);
-        if (input.value === '') return toast('Enter a stock quantity before saving.', true);
-        if (!product(id) || !Number.isSafeInteger(stock) || stock < 0 || stock > MAX_STOCK) return toast('Enter a whole stock quantity from 0 to 1,000,000.', true);
-        const before = shared.stocks[id] ? shared.stocks[id].stock : 'not set';
-        if (mutate(() => {
-            shared.stocks[id] = { stock, updatedAt: new Date().toISOString() };
-            log(`Stock for ${product(id).name}: ${before} → ${stock}`);
-        })) commit('Stock updated.');
+        if (input.value === '' || !Number.isSafeInteger(stock) || stock < 0 || stock > MAX_STOCK) return toast('Enter a whole stock quantity from 0 to 1,000,000.',true);
+        const p = product(id);
+        if (!p) return toast('Product not found.',true);
+        confirmBox('Update stock?',`Set ${p.name} stock to ${stock}?`,'Update',()=>executeAction('save-stock',{id,stock},'Stock updated.'));
     };
-
-    /* Products */
     function productFields(p) {
         return [
-            { key: 'name', label: 'Product Name', value: p ? p.name : '', required: true, full: true },
-            { key: 'category', label: 'Category', type: 'select', options: admin.categories.map(c => [c.id, c.name]), value: p ? p.category : '' },
-            { key: 'price', label: 'Price (₱)', type: 'number', min: 0, step: '0.01', value: p ? p.price : '', required: true },
-            { key: 'image', label: 'Image URL (Optional)', type: 'url', value: p ? p.image || '' : '', full: true }
+            {key:'name',label:'Product Name',value:p?p.name:'',required:true,full:true},
+            {key:'category',label:'Category',type:'select',options:admin.categories.map(c=>[c.id,c.name]),value:p?p.category:''},
+            {key:'price',label:'Price (₱)',type:'number',min:0,step:'0.01',value:p?p.price:'',required:true}
         ];
     }
-    function checkProduct(v, ignoreId) {
-        if (!v.name) return 'Enter a product name.';
+    function checkProduct(v,ignoreId) {
+        if (!v.name || v.name.length > 100) return 'Enter a valid product name.';
         if (!Number.isFinite(v.price) || v.price < 0 || v.price > 1000000) return 'Enter a valid price.';
-        if (!admin.categories.some(c => c.id === v.category)) return 'Choose a category.';
-        if (admin.products.some(x => x.id !== ignoreId && x.name.toLowerCase() === v.name.toLowerCase())) return 'Another product already uses that name.';
+        if (!admin.categories.some(c=>String(c.id)===String(v.category))) return 'Choose a category.';
+        if (admin.products.some(p=>p.id!==ignoreId && p.name.toLowerCase()===v.name.toLowerCase())) return 'Another product has that name.';
         return null;
     }
-
     A['add-product'] = () => {
-        if (!admin.categories.length) return toast('Create a category first.', true);
-        openForm({
-            eyebrow: 'Inventory', title: 'Add Product', submit: 'Add Product', fields: productFields(null),
-            onSubmit: v => {
-                const error = checkProduct(v, null);
-                if (error) return error;
-                let id = slugify(v.name) || 'product', n = 2;
-                while (product(id)) id = slugify(v.name) + '-' + n++;
-                if (mutate(() => {
-                    admin.products.push({ id, name: v.name, category: v.category, price: v.price, image: v.image });
-                    log(`Added product ${v.name} (${money(v.price)})`);
-                })) commit('Product added. Stock is “not set” until you add a batch or save a quantity.');
-            }
-        });
+        if (!admin.categories.length) return toast('Create a category first.',true);
+        openForm({eyebrow:'Inventory',title:'Add Product',submit:'Add Product',fields:productFields(null),
+            onSubmit:async v=>{const e=checkProduct(v);if(e)return e;await executeAction('add-product',v,'Product added. Stock is initially 0.');}});
     };
-
-    A['edit-product'] = (id) => {
-        const p = product(id);
-        if (!p) return;
-        openForm({
-            eyebrow: 'Inventory', title: 'Edit Product', fields: productFields(p),
-            onSubmit: v => {
-                const error = checkProduct(v, id);
-                if (error) return error;
-                const changes = [];
-                if (v.price !== p.price) changes.push(`price ${money(p.price)} → ${money(v.price)}`);
-                if (v.name !== p.name) changes.push(`renamed from ${p.name}`);
-                if (v.category !== p.category) changes.push(`category → ${catName(v.category)}`);
-                if (mutate(() => {
-                    shared.batches.forEach(b => { if (b.productId === id) b.productName = v.name; });
-                    Object.assign(p, { name: v.name, category: v.category, price: v.price, image: v.image });
-                    log(`Updated ${v.name}${changes.length ? ': ' + changes.join(', ') : ' (no changes)'}`);
-                })) commit('Product updated.');
-            }
-        });
+    A['edit-product'] = id => {
+        const p=product(id);if(!p)return;
+        openForm({eyebrow:'Inventory',title:'Edit Product',fields:productFields(p),
+            onSubmit:async v=>{const e=checkProduct(v,id);if(e)return e;await executeAction('edit-product',{...v,id},'Product updated.');}});
     };
-
-    A['delete-product'] = (id) => {
-        const p = product(id);
-        if (!p) return;
-        const open = allRecords().filter(r => ACTIVE.includes(r.status) && (r.items || []).some(i => i.productId === id)).length;
-        confirmBox('Delete product?', `“${p.name}” will be removed from the catalog.` + (open ? ` ${open} active request(s) still reference it.` : ''), 'Delete', () => {
-            if (mutate(() => {
-                admin.products = admin.products.filter(x => x.id !== id);
-                delete shared.stocks[id];
-                log(`Deleted product ${p.name}`);
-            })) commit('Product deleted.');
-        });
+    A['delete-product'] = id => {
+        const p=product(id);if(!p)return;
+        confirmBox('Delete product?',`“${p.name}” will be deleted if no orders, reservations, or batches reference it.`, 'Delete',
+            ()=>executeAction('delete-product',{id},'Product deleted.'));
     };
-
-    /* Orders & reservations */
-    async function patchRequestStatus(record, status) {
-        const path = record.type === 'reservation' ? 'reservations' : 'orders';
-        const response = await fetch((window.PANADERO_API || '/api') + '/' + path + '/' + encodeURIComponent(record.id) + '/status', {
-            method: 'PATCH',
-            headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + (localStorage.getItem('panadero-api-token') || '')},
-            body: JSON.stringify({ status })
-        });
-        return response.json();
+    async function patchRequestStatus(record,status) {
+        const kind=record.type==='reservation'?'reservations':'orders';
+        const response=await fetch(apiRoot+'/'+kind+'/'+encodeURIComponent(record.id)+'/status',
+            {method:'PATCH',headers:authHeaders(),body:JSON.stringify({status})});
+        const result=await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.message || 'Unable to update status.');
+        await reloadDatabase();
     }
-    A['save-status'] = (id, el, row) => {
-        const record = findRecord(row.dataset.type, id);
-        if (!record) return toast('Request not found.', true);
-        const status = row.querySelector('.record-status-select').value;
-        if (status === record.status) return toast('Choose the next status first.', true);
-        const next = FLOW[FLOW.indexOf(record.status) + 1];
-        if (status !== next) return toast('Choose the next status in the workflow.', true);
-        confirmBox('Update request status?', `${refNo(record)}: ${title(record.status)} → ${title(status)}.`, 'Update Status', () => {
-            el.disabled = true;
-            patchRequestStatus(record, status).then(result => {
-                if (!result.ok) return toast(result.message || 'Status update failed.', true);
-                const before = record.status;
-                record.status = status;
-                record.updatedAt = new Date().toISOString();
-                log(`${title(record.type)} ${refNo(record)}: ${before} → ${status}`);
-                sessionStorage.setItem(SHARED_KEY, JSON.stringify(shared));
-                commit(`${refNo(record)} is now ${title(status)}.`);
-            }).catch(() => toast('Unable to update the request. Try again.', true))
-              .finally(() => { el.disabled = false; });
+    A['save-status'] = (id,el,row) => {
+        const record=findRecord(row.dataset.type,id);if(!record)return toast('Request not found.',true);
+        const status=row.querySelector('.record-status-select').value;
+        const next=FLOW[FLOW.indexOf(record.status)+1];
+        if(status!==next)return toast('Choose the next status.',true);
+        confirmBox('Update request status?',`${refNo(record)}: ${title(record.status)} → ${title(status)}.`, 'Update',async()=>{
+            await patchRequestStatus(record,status);toast('Status updated.');
         });
     };
-
-    A['cancel-record'] = (id, el, row) => {
-        const record = findRecord(row.dataset.type, id);
-        if (!record) return;
-        confirmBox('Cancel request?', `${title(row.dataset.type)} ${refNo(record)} for ${customerName(record)} will be marked as cancelled.`, 'Cancel Request', () => {
-            patchRequestStatus(record, 'cancelled').then(result => {
-                if (!result.ok) return toast(result.message || 'Unable to cancel request.', true);
-                record.status = 'cancelled';
-                record.updatedAt = new Date().toISOString();
-                log(`Cancelled ${row.dataset.type} ${refNo(record)}`);
-                sessionStorage.setItem(SHARED_KEY, JSON.stringify(shared));
-                commit('Request cancelled.');
-            }).catch(() => toast('Unable to cancel request.', true));
+    A['cancel-record'] = (id,el,row) => {
+        const record=findRecord(row.dataset.type,id);if(!record)return;
+        confirmBox('Cancel request?',`${refNo(record)} will be cancelled, and reserved stock restored.`, 'Cancel',async()=>{
+            await patchRequestStatus(record,'cancelled');toast('Request cancelled.');
         });
     };
-
-    A['delete-record'] = (id, el, row) => {
-        const type = row.dataset.type;
-        const record = findRecord(type, id);
-        if (!record) return;
-        confirmBox('Delete record?', `${title(type)} ${refNo(record)} will be permanently removed.`, 'Delete', () => {
-            if (mutate(() => {
-                if (type === 'reservation') shared.reservations = shared.reservations.filter(r => r.id !== id);
-                else shared.orders = shared.orders.filter(r => r.id !== id);
-                log(`Deleted ${type} record ${refNo(record)}`);
-            })) commit('Record deleted.');
-        });
+    A['delete-record'] = (id,el,row) => {
+        const record=findRecord(row.dataset.type,id);if(!record)return;
+        confirmBox('Delete cancelled request?',`${refNo(record)} will be permanently deleted.`, 'Delete',
+            ()=>executeAction(row.dataset.type==='reservation'?'delete-reservation':'delete-order',{id},'Cancelled request deleted.'));
     };
-
-    /* Categories */
-    A['add-category'] = () => openForm({
-        eyebrow: 'Categories', title: 'Add Category', submit: 'Add', fields: [{ key: 'name', label: 'Category Name', required: true, full: true }],
-        onSubmit: v => {
-            if (!v.name) return 'Enter a category name.';
-            if (admin.categories.some(c => c.name.toLowerCase() === v.name.toLowerCase())) return 'That category already exists.';
-            let id = slugify(v.name) || 'category', n = 2;
-            while (admin.categories.some(c => c.id === id)) id = slugify(v.name) + '-' + n++;
-            if (mutate(() => { admin.categories.push({ id, name: v.name }); log(`Added category ${v.name}`); })) commit('Category added.');
-        }
-    });
-
-    A['edit-category'] = (id) => {
-        const c = admin.categories.find(x => x.id === id);
-        if (!c) return;
-        openForm({
-            eyebrow: 'Categories', title: 'Rename Category', fields: [{ key: 'name', label: 'Category Name', value: c.name, required: true, full: true }],
-            onSubmit: v => {
-                if (!v.name) return 'Enter a category name.';
-                if (admin.categories.some(x => x.id !== id && x.name.toLowerCase() === v.name.toLowerCase())) return 'That category already exists.';
-                const old = c.name;
-                if (mutate(() => { c.name = v.name; log(`Renamed category ${old} → ${v.name}`); })) commit('Category renamed.');
-            }
-        });
+    A['add-category'] = () => openForm({eyebrow:'Categories',title:'Add Category',submit:'Add',fields:[{key:'name',label:'Category Name',required:true,full:true}],
+        onSubmit:async v=>{if(!v.name||v.name.length>50)return 'Enter a name of up to 50 characters.';await executeAction('add-category',v,'Category added.');}});
+    A['edit-category'] = id => {
+        const c=admin.categories.find(c=>String(c.id)===String(id));if(!c)return;
+        openForm({eyebrow:'Categories',title:'Rename Category',fields:[{key:'name',label:'Category Name',value:c.name,required:true,full:true}],
+            onSubmit:async v=>{if(!v.name||v.name.length>50)return 'Enter a name of up to 50 characters.';await executeAction('edit-category',{...v,id},'Category renamed.');}});
     };
-
-    A['delete-category'] = (id) => {
-        const c = admin.categories.find(x => x.id === id);
-        if (!c) return;
-        const count = admin.products.filter(p => p.category === id).length;
-        if (count) return toast(`“${c.name}” still has ${count} product(s). Move or delete them first.`, true);
-        confirmBox('Delete category?', `“${c.name}” will be removed.`, 'Delete', () => {
-            if (mutate(() => { admin.categories = admin.categories.filter(x => x.id !== id); log(`Deleted category ${c.name}`); })) commit('Category deleted.');
-        });
+    A['delete-category'] = id => {
+        const c=admin.categories.find(c=>String(c.id)===String(id));if(!c)return;
+        if(admin.products.some(p=>String(p.category)===String(id)))return toast('Move or delete products in this category first.',true);
+        confirmBox('Delete category?',`“${c.name}” will be removed.`, 'Delete',
+            ()=>executeAction('delete-category',{id},'Category deleted.'));
     };
-
-    /* Users */
-    A['add-user'] = () => openForm({
-        eyebrow: 'Users', title: 'Add User', submit: 'Add User',
-        fields: [
-            { key: 'name', label: 'Full Name', required: true, full: true },
-            { key: 'email', label: 'Email', type: 'email', required: true },
-            { key: 'role', label: 'Role', type: 'select', options: ROLES, value: 'staff' }
-        ],
-        onSubmit: v => {
-            if (!v.name) return 'Enter a full name.';
-            if (admin.users.some(u => u.email.toLowerCase() === v.email.toLowerCase())) return 'That email is already registered.';
-            if (mutate(() => {
-                admin.users.push({ id: makeId('user'), name: v.name, email: v.email, role: v.role });
-                log(`Created ${title(v.role)} account for ${v.name}`);
-            })) commit('User added.');
-        }
-    });
-
-    A['delete-user'] = (id) => {
-        const u = admin.users.find(x => x.id === id);
-        if (!u) return;
-        confirmBox('Delete user?', `${u.name}'s account will be removed.`, 'Delete', () => {
-            if (mutate(() => { admin.users = admin.users.filter(x => x.id !== id); log(`Deleted account ${u.name}`); })) commit('User deleted.');
-        });
+    A['add-user'] = () => openForm({eyebrow:'Users',title:'Add User',submit:'Create Account',
+        fields:[{key:'name',label:'Full Name',required:true,full:true},
+            {key:'email',label:'Email',type:'email',required:true},
+            {key:'role',label:'Role',type:'select',options:ROLES,value:'staff'},
+            {key:'password',label:'Initial Password (min 8 characters)',type:'password',required:true,full:true}],
+        onSubmit:async v=>{if(v.password.length<8)return 'Password must contain at least 8 characters.';await executeAction('add-user',v,'User account created.');}});
+    A['delete-user'] = id => {
+        const u=admin.users.find(u=>String(u.id)===String(id));if(!u)return;
+        confirmBox('Delete user?',`${u.name}'s account will be deleted if no records reference it.`, 'Delete',
+            ()=>executeAction('delete-user',{id},'User deleted.'));
     };
-
-    A['set-role'] = (id, el) => {
-        const u = admin.users.find(x => x.id === id);
-        if (!u || !ROLES.some(r => r[0] === el.value)) return;
-        const old = u.role;
-        if (mutate(() => { u.role = el.value; log(`Changed ${u.name}'s role: ${title(old)} → ${title(el.value)}`); })) commit('Role updated.');
+    A['set-role'] = (id,el) => {
+        const u=admin.users.find(u=>String(u.id)===String(id));if(!u||!ROLES.some(r=>r[0]===el.value))return;
+        const newRole=el.value;if(newRole===u.role)return;
+        render(); // Revert the visible dropdown until the confirmed database update succeeds.
+        confirmBox('Change user role?',`${u.name}: ${title(u.role)} → ${title(newRole)}.`, 'Change Role',
+            ()=>executeAction('set-role',{id,role:newRole},'User role changed.'));
     };
-
-    A['reset-data'] = () => confirmBox('Reset frontend data?',
-        'This clears the stocks, batches, orders, reservations, users, catalog edits, and logs saved in this browser session.', 'Reset', () => {
-            try { sessionStorage.removeItem(SHARED_KEY); sessionStorage.removeItem(ADMIN_KEY); } catch (_) { /* ignore */ }
-            location.hash = '#dashboard';
-            location.reload();
+    A['reset-data'] = () => confirmBox('Clear cached admin view?',
+        'This clears only cached browser information. MySQL records will not be deleted.','Clear Cache',()=>{
+            sessionStorage.removeItem(SHARED_KEY);sessionStorage.removeItem(ADMIN_KEY);location.reload();
         });
 
     /* ---------- Events (delegated) ---------- */
@@ -810,15 +717,5 @@
 
     window.addEventListener('hashchange', route);
     route();
-    // Hydrate the same UI from the database; all existing dialogs and layout remain unchanged.
-    fetch((window.PANADERO_API || '/api') + '/admin/state', {headers: localStorage.getItem('panadero-api-token') ? {Authorization:'Bearer '+localStorage.getItem('panadero-api-token')} : {}}).then(r => r.json()).then(state => {
-        if (!state.ok) return;
-        admin.categories = state.categories || admin.categories;
-        admin.products = (state.products || []).map(p => ({id:p.id,name:p.name,category:p.category,price:Number(p.price),image:p.image || ''}));
-        admin.users = state.users || [];
-        shared.orders = (state.orders || []).map(canonical); shared.reservations = (state.reservations || []).map(canonical);
-        shared.batches = state.batches || [];
-        shared.stocks = {}; (state.products || []).forEach(p => { if (Number.isInteger(p.stock)) shared.stocks[p.id] = {stock:p.stock,updatedAt:null}; });
-        render();
-    }).catch(() => {});
+    reloadDatabase().catch(error => toast(error.message || 'Unable to load database.', true));
 })();

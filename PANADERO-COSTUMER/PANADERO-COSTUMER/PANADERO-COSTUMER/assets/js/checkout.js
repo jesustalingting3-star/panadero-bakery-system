@@ -78,7 +78,7 @@
     checkoutItems.forEach(function (entry) {
         const row = document.createElement('div');
         row.className = 'summary-item';
-        row.innerHTML = `<span>${entry.product.name} × ${entry.quantity}</span><strong>${ProductService.formatPrice(entry.lineTotal)}</strong>`;
+        row.innerHTML = `<span>${escapeHtml(entry.product.name)} × ${entry.quantity}</span><strong>${ProductService.formatPrice(entry.lineTotal)}</strong>`;
         itemsEl.appendChild(row);
     });
     subtotalEl.textContent = ProductService.formatPrice(getSubtotal());
@@ -556,10 +556,30 @@
                 CustomerPreferenceService.saveCheckoutPreferences(order);
             }
 
+            // Retain the customer-selected details for the immediate receipt.
+            // The backend remains authoritative for product prices, quantities, and totals.
+            if (reference && window.OrderReceipt) {
+                OrderReceipt.remember(reference, {
+                    name: [order.customer.firstName, order.customer.lastName].filter(Boolean).join(' '),
+                    email: order.customer.email,
+                    fulfillment: order.fulfillment.method,
+                    deliveryAddress: order.fulfillment.deliveryAddress,
+                    paymentMethod: order.paymentMethod,
+                    createdAt: new Date().toISOString(),
+                    total: getSubtotal(),
+                    items: checkoutItems.map(entry => ({
+                        name: entry.product.name,
+                        quantity: entry.quantity,
+                        price: entry.product.price,
+                        lineTotal: entry.lineTotal
+                    }))
+                });
+            }
             if (!directCheckout) CartService.clearCart();
 
             const statusUrl = new URL('track-order.html', window.location.href);
             statusUrl.searchParams.set('tab', 'orders');
+            statusUrl.searchParams.set('receipt', '1');
             if (reference) statusUrl.searchParams.set('ref', reference);
             window.location.assign(statusUrl.href);
         } catch (error) {

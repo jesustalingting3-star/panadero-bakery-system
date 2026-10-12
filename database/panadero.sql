@@ -3,8 +3,9 @@ USE panadero_bakery;
 
 CREATE TABLE IF NOT EXISTS users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
+    username VARCHAR(50) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
+    mobile VARCHAR(11) NULL,
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('Admin', 'Staff', 'Customer') NOT NULL DEFAULT 'Customer',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -31,6 +32,11 @@ CREATE TABLE IF NOT EXISTS orders (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    delivery_method VARCHAR(12) NULL,
+    delivery_address VARCHAR(500) NULL,
+    recipient_name VARCHAR(100) NULL,
+    recipient_mobile VARCHAR(11) NULL,
+    payment_method VARCHAR(12) NULL,
     order_status ENUM('Pending', 'Processing', 'Ready', 'Completed', 'Cancelled') NOT NULL DEFAULT 'Pending',
     order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
@@ -101,3 +107,9 @@ CREATE TABLE IF NOT EXISTS customer_notifications (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Categories, products, and demo staff/admin accounts are seeded by server.js on startup.
+
+-- Startup seed marker: once initial catalog/accounts are created they are not recreated after deletion.
+CREATE TABLE IF NOT EXISTS app_settings (
+    setting_key VARCHAR(100) PRIMARY KEY,
+    setting_value VARCHAR(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

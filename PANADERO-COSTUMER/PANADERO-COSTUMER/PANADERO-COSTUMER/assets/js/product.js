@@ -1,4 +1,5 @@
 (async function () {
+    const safeHtml = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
     const shell = document.getElementById('product-view');
     if (!shell) return;
 
@@ -24,18 +25,18 @@
         <nav class="breadcrumb" aria-label="Breadcrumb">
             <a href="index.html">Home</a><span>/</span>
             <a href="menu.html">Menu</a><span>/</span>
-            <a href="menu.html?category=${encodeURIComponent(product.category)}">${categoryName}</a><span>/</span>
-            <span aria-current="page">${product.name}</span>
+            <a href="menu.html?category=${encodeURIComponent(product.category)}">${safeHtml(categoryName)}</a><span>/</span>
+            <span aria-current="page">${safeHtml(product.name)}</span>
         </nav>
 
         <section class="product-detail">
             <div class="product-image-wrap">
-                <img src="${product.image}" alt="${product.name}">
+                <img src="${safeHtml(product.image)}" alt="${safeHtml(product.name)}">
             </div>
 
             <div class="product-info">
-                <p class="product-category">${categoryName}</p>
-                <h1>${product.name}</h1>
+                <p class="product-category">${safeHtml(categoryName)}</p>
+                <h1>${safeHtml(product.name)}</h1>
                 <p class="price">${ProductService.formatPrice(product.price)}</p>
 
                 <div class="stock-panel" aria-live="polite">
@@ -161,7 +162,7 @@
         }
 
         message.className = 'status-message success';
-        message.textContent = `${product.name} × ${quantity} added to cart.`;
+        message.textContent = `${safeHtml(product.name)} × ${quantity} added to cart.`;
 
         const originalText = addToCartButton.textContent;
         addToCartButton.textContent = 'Added to Cart ✓';

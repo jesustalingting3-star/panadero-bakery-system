@@ -212,7 +212,7 @@ REM ----- Never kill/reuse an unrelated program on port 3000 -----
 echo [7/7] Starting PANADERO...
 REM ----- Only reuse a server if it is THIS updated PANADERO build -----
 REM The health endpoint alone is not sufficient: older builds may also return OK.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "try {$b=Invoke-RestMethod -TimeoutSec 2 http://127.0.0.1:3000/api/build; $h=Invoke-RestMethod -TimeoutSec 2 http://127.0.0.1:3000/api/health; if($b.build -eq 'panadero-customer-notifications-20261009-r3' -and $h.ok -and $h.database){exit 0}else{exit 1}} catch {exit 1}" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try {$b=Invoke-RestMethod -TimeoutSec 2 http://127.0.0.1:3000/api/build; $h=Invoke-RestMethod -TimeoutSec 2 http://127.0.0.1:3000/api/health; if($b.build -eq 'panadero-full-audit-20261011-r6' -and $h.ok -and $h.database){exit 0}else{exit 1}} catch {exit 1}" >nul 2>&1
 if not errorlevel 1 goto :SERVER_READY
 
 netstat -ano | findstr /R /C:":3000 .*LISTENING" >nul 2>&1
@@ -228,7 +228,7 @@ if not errorlevel 1 (
 start "PANADERO Server - Keep Open" cmd.exe /k ""%NODE_EXE%" "%CD%\server.js""
 echo       Waiting for PANADERO server...
 for /L %%N in (1,1,30) do (
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "try {$b=Invoke-RestMethod -TimeoutSec 1 http://127.0.0.1:3000/api/build; $h=Invoke-RestMethod -TimeoutSec 1 http://127.0.0.1:3000/api/health; if($b.build -eq 'panadero-customer-notifications-20261009-r3' -and $h.ok -and $h.database){exit 0}else{exit 1}} catch {exit 1}" >nul 2>&1
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "try {$b=Invoke-RestMethod -TimeoutSec 1 http://127.0.0.1:3000/api/build; $h=Invoke-RestMethod -TimeoutSec 1 http://127.0.0.1:3000/api/health; if($b.build -eq 'panadero-full-audit-20261011-r6' -and $h.ok -and $h.database){exit 0}else{exit 1}} catch {exit 1}" >nul 2>&1
   if not errorlevel 1 goto :SERVER_READY
   timeout /t 1 /nobreak >nul
 )

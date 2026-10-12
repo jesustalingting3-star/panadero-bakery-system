@@ -152,7 +152,9 @@
 
         if (!confirmed) return;
 
-        const result = InventoryService.updateStock(row.dataset.productId, input.value);
+        button.disabled = true;
+        const result = await InventoryService.updateStock(row.dataset.productId, input.value);
+        button.disabled = false;
         setMessage(message, result.ok ? 'Stock updated.' : result.message, result.ok ? 'success' : 'error');
         renderInventory();
     });
@@ -217,7 +219,7 @@
             return;
         }
 
-        const result = InventoryService.addBatch(payload);
+        const result = await InventoryService.addBatch(payload);
 
         if (!result.ok) {
             if (typeof dialog.showModal === 'function') dialog.showModal();

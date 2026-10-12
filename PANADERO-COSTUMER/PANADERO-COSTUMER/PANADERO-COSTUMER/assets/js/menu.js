@@ -1,4 +1,5 @@
 (async function () {
+    const safeHtml = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
     const grid = document.getElementById('product-grid');
     const search = document.getElementById('menu-search');
     const status = document.getElementById('menu-status');
@@ -46,9 +47,9 @@
                     ? `<span class="product-stock-label ${product.stock === 0 ? 'out' : ''}">${product.stock === 0 ? 'Out of Stock' : product.stock + ' in stock'}</span>`
                     : '';
                 card.innerHTML = `
-                    <img src="${product.image}" alt="${product.name}">
+                    <img src="${safeHtml(product.image)}" alt="${safeHtml(product.name)}">
                     <div class="product-card-body">
-                        <h3>${product.name}</h3>
+                        <h3>${safeHtml(product.name)}</h3>
                         <p class="price">${ProductService.formatPrice(product.price)}</p>
                         ${stockLabel}
                     </div>

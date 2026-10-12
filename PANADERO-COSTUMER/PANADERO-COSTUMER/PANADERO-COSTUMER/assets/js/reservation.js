@@ -1,4 +1,5 @@
 (async function () {
+    const safeHtml = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
     const empty = document.getElementById('reservation-empty');
     const layout = document.getElementById('reservation-layout');
     const itemsEl = document.getElementById('reservation-summary-items');
@@ -37,7 +38,7 @@
 
     const row = document.createElement('div');
     row.className = 'summary-item';
-    row.innerHTML = `<span>${product.name} × ${quantity}</span><strong>${ProductService.formatPrice(lineTotal)}</strong>`;
+    row.innerHTML = `<span>${safeHtml(product.name)} × ${quantity}</span><strong>${ProductService.formatPrice(lineTotal)}</strong>`;
     itemsEl.appendChild(row);
     subtotalEl.textContent = ProductService.formatPrice(lineTotal);
 
