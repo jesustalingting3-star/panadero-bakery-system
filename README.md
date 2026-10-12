@@ -69,4 +69,4 @@ PANADERO/
 └── package.json             Node.js dependencies and scripts
 ```
 
-See `docs/PANADERO-LOCAL-ERD-UPDATED.md`, `docs/REPOSITORY-STRUCTURE.md`, and `LOCAL-SETUP.md` for detailed documentation.
+See `docs/PANADERO-System-Documentation.docx` (editable Word copy), `docs/PANADERO-System-Documentation.pdf`, `docs/PANADERO-ERD.mmd`, `docs/PANADERO-LOCAL-ERD-UPDATED.md`, `docs/REPOSITORY-STRUCTURE.md`, and `LOCAL-SETUP.md` for detailed documentation.

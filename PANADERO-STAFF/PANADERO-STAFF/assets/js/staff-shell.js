@@ -162,8 +162,13 @@
                 })
                 : window.confirm('Log out?');
             if (!confirmed) return;
-            try { sessionStorage.removeItem('panadero-auth-session-v3'); localStorage.removeItem('panadero-auth-session-v3'); sessionStorage.removeItem('panadero-auth-session-v2'); localStorage.removeItem('panadero-auth-session-v2'); } catch (_) {}
-            window.location.href = '../PANADERO-COSTUMER/login.html';
+            try {
+                const token = localStorage.getItem('panadero-api-token');
+                if (token) await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+            } catch (_) {}
+            localStorage.removeItem('panadero-auth-session-v2');
+            localStorage.removeItem('panadero-api-token');
+            window.location.replace('/login.html');
         });
     }
 

@@ -1,8 +1,4 @@
-/* PANADERO Admin — frontend-only.
-   Mirrors the Staff/Customer sites: same catalog (PANADERO_DATA), same lowercase status flow
-   (pending -> preparing -> ready -> completed), same record shapes, and the same sessionStorage
-   key for stocks / batches / orders / reservations ('panadero-staff-ui-v2').
-   No fake orders are created. Backend developers can replace the store functions later. */
+/* PANADERO Admin dashboard: role-based portal and MySQL-backed request status workflow. */
 (function () {
     'use strict';
 
@@ -116,10 +112,11 @@
         return ['Fresh', 'ready'];
     }
 
-    const allRecords = () => shared.orders.map(o => Object.assign({}, o, { type: o.type === 'reservation' ? 'reservation' : 'order' }))
-        .concat(shared.reservations.map(r => Object.assign({}, r, { type: 'reservation' })))
+    const canonical = r => Object.assign({}, r, { status: r.status === 'processing' ? 'preparing' : r.status });
+    const allRecords = () => shared.orders.map(o => canonical(Object.assign({}, o, { type: o.type === 'reservation' ? 'reservation' : 'order' })))
+        .concat(shared.reservations.map(r => canonical(Object.assign({}, r, { type: 'reservation' }))))
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const findRecord = (type, id) => (type === 'reservation' ? shared.reservations : shared.orders).find(r => r.id === id);
+    const findRecord = (type, id) => { const r = (type === 'reservation' ? shared.reservations : shared.orders).find(r => String(r.id) === String(id)); if (r && r.status === 'processing') r.status = 'preparing'; return r; };
     const refNo = r => r.orderNumber || r.reservationNumber || r.id || '';
     const customerName = r => [r.customer && r.customer.firstName, r.customer && r.customer.lastName].filter(Boolean).join(' ') || 'Guest';
 
@@ -241,7 +238,7 @@
                 ['Inventory Needs Attention', String(items.filter(i => inventoryState(i) !== 'in-stock').length), 'out of stock or stock not set']
             ]);
         },
-        panel: ['Recent Orders & Reservations', 'Customer requests will appear here once connected to the shared system data.',
+        panel: ['Recent Orders & Reservations', 'Latest customer requests.',
             '<a class="admin-secondary" href="#orders">View All</a>'],
         table: () => table(['Reference', 'Type', 'Customer', 'Total', 'Status', 'Submitted'],
             allRecords().slice(0, 8).map(r => `<tr><td><strong>${escapeHtml(refNo(r))}</strong></td>
@@ -300,9 +297,9 @@
 
     /* Orders & reservations */
     function statusOptions(r) {
-        const i = FLOW.indexOf(r.status);
-        const list = r.status === 'cancelled' ? ['cancelled'] : FLOW.filter((s, idx) => s === r.status || (i >= 0 && idx === i + 1));
-        return list.map(s => `<option value="${s}"${s === r.status ? ' selected' : ''}>${title(s)}</option>`).join('');
+        const i = FLOW.indexOf(r.status === 'processing' ? 'preparing' : r.status);
+        const list = r.status === 'cancelled' ? ['cancelled'] : FLOW.filter((s, idx) => idx === i || (i >= 0 && idx === i + 1));
+        return list.map(s => `<option value="${s}"${s === FLOW[i] ? ' selected' : ''}>${title(s)}</option>`).join('');
     }
     function scheduleText(r) {
         if (r.type === 'reservation') {
@@ -310,8 +307,8 @@
             return escapeHtml(s || 'Not specified');
         }
         const f = r.fulfillment || {};
-        const when = [f.preferredDate, f.preferredTime].filter(Boolean).join(' ');
-        return escapeHtml(title(f.method || 'pickup')) + (f.deliveryAddress ? `<br><small>${escapeHtml(f.deliveryAddress)}</small>` : '') + (when ? `<br><small>${escapeHtml(when)}</small>` : '');
+        const payment = ({cash:'Cash',card:'Card',gcash:'GCash'}[r.paymentMethod] || r.paymentMethod || '');
+        return escapeHtml(title(f.method || 'pickup')) + (f.deliveryAddress ? `<br><small>${escapeHtml(f.deliveryAddress)}</small>` : '') + (payment ? `<br><small>Payment: ${escapeHtml(payment)}</small>` : '');
     }
     function searchable(r) {
         const c = r.customer || {};
@@ -343,7 +340,7 @@
                         <td><div class="stock-editor"><select class="admin-field compact record-status-select" aria-label="Status for ${escapeHtml(refNo(r))}"${open ? '' : ' disabled'}>${statusOptions(r)}</select><button class="admin-small-button" type="button" data-action="save-status"${r.status === 'completed' || r.status === 'cancelled' ? ' disabled' : ''}>Save</button></div></td>
                         <td><div class="row-actions">${open ? '<button class="admin-small-button danger" type="button" data-action="cancel-record">Cancel</button>' : '<button class="admin-small-button danger" type="button" data-action="delete-record">Delete</button>'}</div></td></tr>`;
                 });
-            return table(['Reference', 'Customer', 'Products', 'Schedule', 'Total', 'Status', 'Update', 'Admin'], rows, 'No orders or reservations match the selected filters.');
+            return table(['Reference', 'Customer', 'Products', 'Details', 'Total', 'Status', 'Update', 'Admin'], rows, 'No orders or reservations match the selected filters.');
         }
     });
 
@@ -425,42 +422,80 @@
     });
 
     /* ---------- Rendering ---------- */
+    const NAV_ICONS = {
+        dashboard: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="11" width="7" height="10" rx="1.5"/><rect x="3" y="12" width="7" height="9" rx="1.5"/>',
+        inventory: '<path d="M4 7h16M7 3h10l2 4H5l2-4Z"/><path d="M5 7h14v12H5zM9 11h6M9 15h6"/>',
+        orders: '<path d="M7 3h10M7 7h10M7 11h10M7 15h6M5 21h14a2 2 0 0 0 2-2V5l-4-2H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2Z"/>',
+        customers: '<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 6a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5v1"/>',
+        categories: '<path d="M3 6h18v14H3zM3 6l4-3h10l4 3M8 12h8"/>',
+        users: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+        logs: '<path d="M4 3h16v18H4zM8 7h8M8 11h8M8 15h5"/>',
+        logout: '<path d="M10 17l-5-5 5-5M5 12h11M14 5h4a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4"/>'
+    };
+    const sidebarIcon = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${NAV_ICONS[name] || NAV_ICONS.dashboard}</svg>`;
     const shell = $('admin-shell');
     shell.innerHTML = `
-        <header class="admin-home-header"><div class="admin-header-container">
-            <a class="admin-home-logo" href="#dashboard">PANADERO<span>Admin Portal</span></a>
-            <button type="button" id="admin-menu-button" class="admin-menu-button" aria-controls="admin-navigation" aria-label="Toggle admin navigation" aria-expanded="false">☰</button>
-            <nav class="admin-home-nav" id="admin-navigation" aria-label="Admin navigation"></nav>
-        </div></header>
-        <main class="admin-main" id="admin-main"></main>
-        <footer class="admin-home-footer">
-            <a href="#dashboard" class="admin-footer-logo">PANADERO</a>
-            <p>Freshly baked. Simply delicious.</p>
-            <p class="admin-copyright">&copy; ${new Date().getFullYear()} PANADERO.</p>
-        </footer>`;
+        <div class="admin-app-shell">
+            <aside class="admin-sidebar" id="admin-sidebar" aria-label="Admin sidebar">
+                <div class="admin-sidebar-brand">
+                    <a href="#dashboard"><img src="assets/images/logo.jpg" alt="" width="52" height="52" onerror="this.onerror=null;this.src='assets/images/logo.svg'">PANADERO</a>
+                    <span>Admin</span>
+                </div>
+                <nav class="admin-sidebar-nav" id="admin-navigation" aria-label="Admin navigation"></nav>
+                <div class="admin-sidebar-account" aria-label="Admin account">
+                    <span class="admin-account-avatar">${sidebarIcon('users')}</span>
+                    <span class="admin-account-copy"><strong>Admin</strong><small>Account</small></span>
+                </div>
+                <button class="admin-sidebar-logout" type="button" id="admin-logout-button">${sidebarIcon('logout')}<span>Logout</span></button>
+            </aside>
+            <div class="admin-sidebar-backdrop" id="admin-sidebar-backdrop" hidden></div>
+            <div class="admin-shell-main">
+                <header class="admin-mobile-bar">
+                    <button type="button" id="admin-menu-button" class="admin-menu-button" aria-controls="admin-sidebar" aria-label="Toggle admin navigation" aria-expanded="false">☰</button>
+                </header>
+                <main class="admin-main" id="admin-main"></main>
+                <footer class="admin-home-footer"><a href="#dashboard" class="admin-footer-logo">PANADERO</a><p>Freshly baked. Simply delicious.</p><p class="admin-copyright">&copy; ${new Date().getFullYear()} PANADERO.</p></footer>
+            </div>
+        </div>`;
 
     const main = $('admin-main');
     const nav = $('admin-navigation');
     const menuButton = $('admin-menu-button');
+    const sidebar = $('admin-sidebar');
+    const backdrop = $('admin-sidebar-backdrop');
     let cur = null;
 
     function closeMenu() {
-        nav.classList.remove('show');
+        document.body.classList.remove('admin-sidebar-open');
+        backdrop.hidden = true;
         menuButton.setAttribute('aria-expanded', 'false');
         menuButton.textContent = '☰';
     }
     menuButton.addEventListener('click', () => {
-        const open = nav.classList.toggle('show');
-        menuButton.setAttribute('aria-expanded', String(open));
-        menuButton.textContent = open ? '✕' : '☰';
+        const open = !document.body.classList.contains('admin-sidebar-open');
+        if (!open) return closeMenu();
+        document.body.classList.add('admin-sidebar-open');
+        backdrop.hidden = false;
+        menuButton.setAttribute('aria-expanded', 'true');
+        menuButton.textContent = '✕';
     });
+    backdrop.addEventListener('click', closeMenu);
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
-    document.addEventListener('click', e => { if (!nav.contains(e.target) && !menuButton.contains(e.target)) closeMenu(); });
+    document.addEventListener('click', e => { if (innerWidth <= 920 && !sidebar.contains(e.target) && !menuButton.contains(e.target)) closeMenu(); });
+    $('admin-logout-button').addEventListener('click', () => confirmBox('Log out?', 'You will return to the login page.', 'Logout', async () => {
+        try {
+            const token = localStorage.getItem('panadero-api-token');
+            if (token) await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+        } catch (_) {}
+        localStorage.removeItem('panadero-auth-session-v2');
+        localStorage.removeItem('panadero-api-token');
+        window.location.replace('/login.html');
+    }));
 
     function render() {
         cur = V[ui.view]();
         nav.innerHTML = NAV.map(([key, label]) =>
-            `<a class="${key === ui.view ? 'active' : ''}" href="#${key}"${key === ui.view ? ' aria-current="page"' : ''}>${escapeHtml(label)}</a>`).join('');
+            `<a class="admin-nav-link ${key === ui.view ? 'active' : ''}" href="#${key}"${key === ui.view ? ' aria-current="page"' : ''}><span class="admin-nav-icon">${sidebarIcon(key)}</span><span>${escapeHtml(label)}</span></a>`).join('');
         const [pTitle, pSub, pExtra] = cur.panel || [];
         main.innerHTML = `
             <header class="admin-page-heading"><div><p class="eyebrow">Admin Portal</p><h1>${escapeHtml(cur.title)}</h1><p>${escapeHtml(cur.sub)}</p></div>${cur.action || ''}</header>
@@ -610,6 +645,15 @@
     };
 
     /* Orders & reservations */
+    async function patchRequestStatus(record, status) {
+        const path = record.type === 'reservation' ? 'reservations' : 'orders';
+        const response = await fetch((window.PANADERO_API || '/api') + '/' + path + '/' + encodeURIComponent(record.id) + '/status', {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + (localStorage.getItem('panadero-api-token') || '')},
+            body: JSON.stringify({ status })
+        });
+        return response.json();
+    }
     A['save-status'] = (id, el, row) => {
         const record = findRecord(row.dataset.type, id);
         if (!record) return toast('Request not found.', true);
@@ -617,23 +661,33 @@
         if (status === record.status) return toast('Choose the next status first.', true);
         const next = FLOW[FLOW.indexOf(record.status) + 1];
         if (status !== next) return toast('Choose the next status in the workflow.', true);
-        const from = record.status;
-        if (mutate(() => {
-            record.status = status;
-            record.updatedAt = new Date().toISOString();
-            log(`${title(row.dataset.type)} ${refNo(record)}: ${from} → ${status}`);
-        })) commit(`${refNo(record) || 'Request'} is now ${status}.`);
+        confirmBox('Update request status?', `${refNo(record)}: ${title(record.status)} → ${title(status)}.`, 'Update Status', () => {
+            el.disabled = true;
+            patchRequestStatus(record, status).then(result => {
+                if (!result.ok) return toast(result.message || 'Status update failed.', true);
+                const before = record.status;
+                record.status = status;
+                record.updatedAt = new Date().toISOString();
+                log(`${title(record.type)} ${refNo(record)}: ${before} → ${status}`);
+                sessionStorage.setItem(SHARED_KEY, JSON.stringify(shared));
+                commit(`${refNo(record)} is now ${title(status)}.`);
+            }).catch(() => toast('Unable to update the request. Try again.', true))
+              .finally(() => { el.disabled = false; });
+        });
     };
 
     A['cancel-record'] = (id, el, row) => {
         const record = findRecord(row.dataset.type, id);
         if (!record) return;
         confirmBox('Cancel request?', `${title(row.dataset.type)} ${refNo(record)} for ${customerName(record)} will be marked as cancelled.`, 'Cancel Request', () => {
-            if (mutate(() => {
+            patchRequestStatus(record, 'cancelled').then(result => {
+                if (!result.ok) return toast(result.message || 'Unable to cancel request.', true);
                 record.status = 'cancelled';
                 record.updatedAt = new Date().toISOString();
                 log(`Cancelled ${row.dataset.type} ${refNo(record)}`);
-            })) commit('Request cancelled.');
+                sessionStorage.setItem(SHARED_KEY, JSON.stringify(shared));
+                commit('Request cancelled.');
+            }).catch(() => toast('Unable to cancel request.', true));
         });
     };
 
@@ -762,7 +816,7 @@
         admin.categories = state.categories || admin.categories;
         admin.products = (state.products || []).map(p => ({id:p.id,name:p.name,category:p.category,price:Number(p.price),image:p.image || ''}));
         admin.users = state.users || [];
-        shared.orders = state.orders || []; shared.reservations = state.reservations || [];
+        shared.orders = (state.orders || []).map(canonical); shared.reservations = (state.reservations || []).map(canonical);
         shared.batches = state.batches || [];
         shared.stocks = {}; (state.products || []).forEach(p => { if (Number.isInteger(p.stock)) shared.stocks[p.id] = {stock:p.stock,updatedAt:null}; });
         render();

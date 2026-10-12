@@ -29,11 +29,12 @@
     }
 
     function statusOptions(record) {
+        if (record.status === 'cancelled') return '<option value="cancelled" selected>Cancelled</option>';
         const statuses = ['pending', 'preparing', 'ready', 'completed'];
-        const current = statuses.indexOf(record.status);
+        const current = statuses.indexOf(record.status === 'processing' ? 'preparing' : record.status);
         return statuses
-            .filter((status, index) => status === record.status || (current >= 0 && index === current + 1))
-            .map(status => `<option value="${status}" ${record.status === status ? 'selected' : ''}>${title(status)}</option>`)
+            .filter((status, index) => index === current || (current >= 0 && index === current + 1))
+            .map(status => `<option value="${status}" ${statuses[current] === status ? 'selected' : ''}>${title(status)}</option>`)
             .join('');
     }
 
@@ -95,10 +96,10 @@
                 <td>${scheduleText(record)}</td>
                 <td><strong>${money(record.total)}</strong></td>
                 <td><span class="status-badge ${escapeHtml(record.status)}">${escapeHtml(record.status)}</span></td>
-                <td><div class="stock-editor"><select class="staff-field record-status-select" aria-label="Status for ${escapeHtml(reference)}">${statusOptions(record)}</select><button type="button" class="staff-small-button save-status">Save</button></div></td>`;
+                <td><div class="stock-editor"><select class="staff-field record-status-select" aria-label="Status for ${escapeHtml(reference)}">${statusOptions(record)}</select><button type="button" class="staff-small-button save-status">Update</button></div></td>`;
             table.appendChild(row);
 
-            if (record.status === 'completed') {
+            if (record.status === 'completed' || record.status === 'cancelled') {
                 row.querySelector('.record-status-select').disabled = true;
                 row.querySelector('.save-status').disabled = true;
             }
@@ -113,7 +114,7 @@
             OrderService.getAllOrders(),
             ReservationService.getAllReservations()
         ]);
-        records = orders.concat(reservations).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        records = orders.concat(reservations).map(record => ({ ...record, status: record.status === 'processing' ? 'preparing' : record.status })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setMessage('');
         render();
     }
@@ -128,7 +129,7 @@
 
         const row = button.closest('tr');
         const selectedStatus = row.querySelector('.record-status-select').value;
-        const record = records.find(item => String(item.id) === String(row.dataset.recordId));
+        const record = records.find(item => String(item.id) === String(row.dataset.recordId) && item.type === row.dataset.recordType);
 
         if (!record) {
             setMessage('Record not found.', 'error');

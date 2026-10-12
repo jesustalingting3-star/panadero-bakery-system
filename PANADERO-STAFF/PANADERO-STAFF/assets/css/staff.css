@@ -290,3 +290,7 @@ select.staff-field{padding-right:34px}
   .staff-toolbar select{font-size:13px}
 }
 .staff-panel-body{overflow:visible}
+
+.status-badge.cancelled{background:#f7dedd;color:#8d2922}
+.record-status-select{min-width:140px;width:145px;max-width:none;padding-right:28px;flex:0 0 auto}
+.staff-table .stock-editor{min-width:230px}

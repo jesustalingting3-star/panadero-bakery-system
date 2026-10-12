@@ -87,4 +87,17 @@ CREATE TABLE IF NOT EXISTS system_logs (
         ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+
+-- Stored per-customer completion notifications (safe on an existing PANADERO database).
+CREATE TABLE IF NOT EXISTS customer_notifications (
+    notification_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    request_type ENUM('order', 'reservation') NOT NULL,
+    request_id INT NOT NULL,
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_customer_completion (user_id, request_type, request_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Categories, products, and demo staff/admin accounts are seeded by server.js on startup.

@@ -11,7 +11,7 @@
 1. Start **MySQL** in XAMPP, if it is not already running.
 2. Double-click `PANADERO-ONE-CLICK.bat`.
 3. The launcher imports `database/panadero.sql`, installs Node packages, starts the server, checks the database health endpoint, and opens the login page.
-4. Use `http://localhost:3000/login.html`.
+4. Use `http://localhost:3000/customer/login.html`.
 
 The launcher searches for MySQL in PATH, XAMPP, and common MySQL installation folders. If the root account has a password, it asks for it during setup. The launcher preserves an existing `.env` file.
 
@@ -45,7 +45,7 @@ Do not share or commit `.env`.
 
 ## Portal URLs
 
-- Login: `http://localhost:3000/login.html`
+- Login: `http://localhost:3000/customer/login.html`
 - Customer: `http://localhost:3000/customer/index.html`
 - Customer signup: `http://localhost:3000/customer/signup.html`
 - Staff: `http://localhost:3000/staff/staff-dashboard.html`

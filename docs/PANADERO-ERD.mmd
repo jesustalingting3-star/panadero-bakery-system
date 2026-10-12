@@ -1,0 +1,81 @@
+erDiagram
+    USERS ||--o{ ORDERS : places
+    USERS ||--o{ RESERVATIONS : makes
+    USERS ||--o{ SYSTEM_LOGS : creates
+    USERS ||--o{ CUSTOMER_NOTIFICATIONS : receives
+    CATEGORIES ||--o{ BREAD_PRODUCTS : contains
+    BREAD_PRODUCTS ||--o{ ORDER_ITEMS : appears_in
+    ORDERS ||--|{ ORDER_ITEMS : contains
+    BREAD_PRODUCTS ||--o{ RESERVATIONS : reserved_as
+    BREAD_PRODUCTS ||--o{ INVENTORY_BATCHES : tracked_in
+
+    USERS {
+        int user_id PK
+        varchar username UK
+        varchar email UK
+        varchar password_hash
+        enum role
+        datetime created_at
+    }
+    CATEGORIES {
+        int category_id PK
+        varchar category_name UK
+        text description
+    }
+    BREAD_PRODUCTS {
+        int product_id PK
+        int category_id FK
+        varchar product_name
+        decimal price
+        int stock_quantity
+        datetime created_at
+    }
+    ORDERS {
+        int order_id PK
+        int user_id FK
+        decimal total_amount
+        enum order_status
+        datetime order_date
+    }
+    ORDER_ITEMS {
+        int order_item_id PK
+        int order_id FK
+        int product_id FK
+        int quantity
+        decimal unit_price
+    }
+    RESERVATIONS {
+        int reservation_id PK
+        int user_id FK
+        int product_id FK
+        int quantity
+        decimal total_amount
+        date preferred_date
+        time preferred_time
+        enum reservation_status
+        datetime reservation_date
+    }
+    INVENTORY_BATCHES {
+        int batch_id PK
+        int product_id FK
+        int quantity
+        date baked_date
+        date expiration_date
+        varchar notes
+        datetime created_at
+    }
+    SYSTEM_LOGS {
+        int log_id PK
+        int user_id FK
+        varchar action_type
+        text description
+        datetime log_date
+    }
+    CUSTOMER_NOTIFICATIONS {
+        bigint notification_id PK
+        int user_id FK
+        enum request_type
+        int request_id
+        boolean is_read
+        datetime created_at
+    }

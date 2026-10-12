@@ -18,35 +18,25 @@
         return (first + last || 'U').toUpperCase();
     }
 
-    const NOTIFICATIONS_KEY = 'panadero-notifications-v1';
+    // Notifications live in MySQL and are delivered only for the authenticated customer.
+    // Do not keep account A's notices in account B's UI on a shared browser.
+    let notificationOwner = '';
+    let notificationItems = [];
+    let notificationTimer = null;
+    let notificationBusy = false;
 
-    function readNotifications() {
-        try {
-            const items = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY) || '[]');
-            return Array.isArray(items) ? items : [];
-        } catch (_) {
-            return [];
-        }
-    }
-
-    function saveNotifications(items) {
-        localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(items));
-    }
-
-    function notificationBelongsToUser(item, user) {
-        if (!item || !user) return false;
-        if (item.userId && user.id) return String(item.userId) === String(user.id);
-        return String(item.email || '').toLowerCase() === String(user.email || '').toLowerCase();
+    function notificationIdentity(user) {
+        return user ? String(user.id || '') + '|' + String(user.email || '').toLowerCase() : '';
     }
 
     function userNotifications(user) {
-        return readNotifications()
-            .filter(item => notificationBelongsToUser(item, user))
-            .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        if (!user || notificationOwner !== notificationIdentity(user)) return [];
+        return notificationItems;
     }
 
     function notificationMarkup(user) {
-        if (!user) return '';
+        // Logged-out users (and Staff/Admin) do not get a customer bell.
+        if (!user || user.role !== 'customer') return '';
         const items = userNotifications(user);
         const unread = items.filter(item => !item.read).length;
         return `<div class="notification-menu-wrap">
@@ -55,7 +45,7 @@
                 <span class="notification-count" id="notification-count" ${unread ? '' : 'hidden'}>${unread > 99 ? '99+' : unread}</span>
             </button>
             <div class="notification-menu" id="notification-menu" hidden>
-                <div class="notification-menu-head"><strong>Notifications</strong></div>
+                <div class="notification-menu-head"><strong>Notifications</strong><button type="button" id="notification-mark-all" class="notification-mark-all">Mark all read</button></div>
                 <div class="notification-list" id="notification-list"></div>
             </div>
         </div>`;
@@ -71,19 +61,18 @@
         const user = getCurrentUser();
         const list = document.getElementById('notification-list');
         const count = document.getElementById('notification-count');
+        const markAll = document.getElementById('notification-mark-all');
         if (!user || !list || !count) return;
-
         const items = userNotifications(user);
         const unread = items.filter(item => !item.read).length;
         count.textContent = unread > 99 ? '99+' : String(unread);
         count.hidden = unread === 0;
-
+        if (markAll) markAll.disabled = unread === 0;
         if (!items.length) {
-            list.innerHTML = '<p class="notification-empty">No notifications.</p>';
+            list.innerHTML = '<p class="notification-empty">No notifications yet.</p>';
             return;
         }
-
-        list.innerHTML = items.slice(0, 12).map(item => {
+        list.innerHTML = items.slice(0, 20).map(item => {
             const when = item.createdAt ? new Date(item.createdAt).toLocaleString() : '';
             return `<a class="notification-item${item.read ? '' : ' unread'}" href="${notificationDestination(item)}" data-notification-id="${escapeHtml(item.id || '')}">
                 <span>${escapeHtml(item.message || 'Order update')}</span>
@@ -92,25 +81,72 @@
         }).join('');
     }
 
-    function markNotificationRead(id) {
-        if (!id) return;
-        const items = readNotifications();
-        const target = items.find(item => String(item.id) === String(id));
-        if (!target || target.read) return;
-        target.read = true;
-        saveNotifications(items);
+    async function notificationRequest(path, options) {
+        const token = localStorage.getItem('panadero-api-token');
+        if (!token) return null;
+        const response = await fetch('/api' + path, {
+            ...(options || {}),
+            headers: { Authorization: 'Bearer ' + token },
+            cache: 'no-store'
+        });
+        if (!response.ok) return null;
+        return response.json();
     }
 
-    function markAllNotificationsRead(user) {
-        const items = readNotifications();
-        let changed = false;
-        items.forEach(item => {
-            if (notificationBelongsToUser(item, user) && !item.read) {
-                item.read = true;
-                changed = true;
-            }
-        });
-        if (changed) saveNotifications(items);
+    async function refreshNotifications() {
+        const user = getCurrentUser();
+        const token = localStorage.getItem('panadero-api-token');
+        if (!user || !token || notificationBusy || document.hidden) return;
+        const identity = notificationIdentity(user);
+        notificationBusy = true;
+        try {
+            const response = await notificationRequest('/notifications');
+            if (!response || !response.ok) return;
+            const current = getCurrentUser();
+            if (!current || notificationIdentity(current) !== identity || localStorage.getItem('panadero-api-token') !== token) return;
+            notificationOwner = identity;
+            notificationItems = Array.isArray(response.notifications) ? response.notifications : [];
+            renderNotificationList();
+        } catch (_) {
+            // Keep the bell available when offline; retry on the next poll or focus.
+        } finally {
+            notificationBusy = false;
+        }
+    }
+
+    function startNotificationUpdates() {
+        if (notificationTimer) clearInterval(notificationTimer);
+        notificationTimer = null;
+        const user = getCurrentUser();
+        const identity = notificationIdentity(user);
+        if (notificationOwner !== identity) {
+            notificationOwner = identity;
+            notificationItems = [];
+        }
+        if (user && user.role === 'customer') {
+            refreshNotifications();
+            notificationTimer = setInterval(refreshNotifications, 12000);
+        }
+    }
+
+    async function markNotificationRead(id) {
+        if (!/^\d+$/.test(String(id))) return;
+        try {
+            const response = await notificationRequest('/notifications/' + encodeURIComponent(id) + '/read', { method: 'PATCH' });
+            if (!response || !response.ok) return;
+            const item = notificationItems.find(entry => String(entry.id) === String(id));
+            if (item) item.read = true;
+            renderNotificationList();
+        } catch (_) { /* Navigation should still work if the network fails. */ }
+    }
+
+    async function markAllNotificationsRead() {
+        try {
+            const response = await notificationRequest('/notifications/read', { method: 'PATCH' });
+            if (!response || !response.ok) return;
+            notificationItems.forEach(item => { item.read = true; });
+            renderNotificationList();
+        } catch (_) { /* A future poll will retry. */ }
     }
 
     function accountMarkup(active) {
@@ -262,17 +298,22 @@
                 const open = notificationMenu.hidden;
                 notificationMenu.hidden = !open;
                 notificationTrigger.setAttribute('aria-expanded', String(open));
-                if (open) {
-                    const user = getCurrentUser();
-                    if (user) markAllNotificationsRead(user);
-                    renderNotificationList();
-                }
+                if (open) refreshNotifications();
             });
 
-            notificationMenu.addEventListener('click', function (event) {
+            notificationMenu.addEventListener('click', async function (event) {
+                const markAll = event.target.closest('#notification-mark-all');
+                if (markAll) {
+                    event.stopPropagation();
+                    await markAllNotificationsRead();
+                    return;
+                }
                 const item = event.target.closest('[data-notification-id]');
                 if (!item) return;
-                markNotificationRead(item.dataset.notificationId);
+                event.preventDefault();
+                const destination = item.href;
+                await markNotificationRead(item.dataset.notificationId);
+                window.location.assign(destination);
             });
         }
 
@@ -301,11 +342,20 @@
     const year = document.getElementById('year');
     if (year) year.textContent = new Date().getFullYear();
 
-    window.addEventListener('panadero-auth-changed', setupHeader);
+    startNotificationUpdates();
+    window.addEventListener('panadero-auth-changed', function () {
+        setupHeader();
+        startNotificationUpdates();
+    });
     window.addEventListener('storage', function (event) {
-        if (event.key === NOTIFICATIONS_KEY && getCurrentUser()) {
-            renderNotificationList();
+        if (event.key === 'panadero-auth-session-v2' || event.key === 'panadero-api-token') {
+            setupHeader();
+            startNotificationUpdates();
         }
+    });
+    window.addEventListener('focus', refreshNotifications);
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) refreshNotifications();
     });
 
     document.addEventListener('click', function (event) {
