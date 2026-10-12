@@ -51,7 +51,7 @@ Set the MySQL credentials in `.env`. Never commit `.env` because it contains the
 - Staff inventory stock updates, batch recording, request listing, and status updates
 - Admin catalog/category/user/stock/request hydration and persistence
 
-The server adds missing checkout/contact columns to existing databases without resetting records. On a first database initialization it seeds the initial catalog with **0 stock** and demo Staff/Admin accounts. Enter actual stock through Staff/Admin before testing checkout. A seed marker prevents deleted demo rows from returning on every restart. See `docs/AUDIT-REPORT.md` for verification and remaining limitations.
+The server adds missing checkout/contact columns to existing databases without resetting records. The canonical SQL now includes fictional rubric sample records with initial stock and demo Staff/Admin accounts. A seed marker prevents deleted demo rows from returning on every restart. Change or remove demo accounts before public deployment. See `docs/AUDIT-REPORT.md` for verification and remaining limitations.
 
 ## Repository organization
 
@@ -60,13 +60,26 @@ PANADERO/
 ├── PANADERO-COSTUMER/       Customer portal source and assets
 ├── PANADERO-STAFF/          Staff portal source and assets
 ├── PANADERO-ADMIN/          Admin portal source and assets
-├── database/panadero.sql    Canonical complete MySQL schema
-├── docs/                    ERD, master book, guides, and defense reviewer
-├── login.html               Compatibility redirect only (no second login form)
-├── server.js                Node.js/Express API and static-file server
+├── database/panadero.sql    Canonical schema plus rubric sample data
+├── docs/
+│   ├── submission/          Current editable Word files and video guide
+│   ├── screenshots/         Current interface screenshots
+│   ├── CONTRIBUTIONS-AND-ROLES.md
+│   ├── FINAL-SUBMISSION-CHECKLIST.md
+│   └── archive/              Preserved older PDFs and database backups
+├── 02_Documentation/        Pointer to current editable documentation
+├── database_backups/        Pointer to preserved database backups
+├── login.html               Compatibility redirect only
+├── server.js                Express API and static-file server
 ├── PANADERO-ONE-CLICK.bat   Windows local launcher
 ├── .env.example             Safe configuration template
-└── package.json             Node.js dependencies and scripts
+└── package.json              Node.js dependencies and scripts
 ```
 
-See `docs/PANADERO-LOCAL-ERD-UPDATED.md`, `docs/REPOSITORY-STRUCTURE.md`, and `LOCAL-SETUP.md` for detailed documentation.
+## Current member work
+
+See [`docs/CONTRIBUTIONS-AND-ROLES.md`](docs/CONTRIBUTIONS-AND-ROLES.md) for the group’s stated role assignments and short contribution descriptions.
+
+## Submission documents
+
+Use the editable files in [`docs/submission/`](docs/submission/), especially the rubric form, the three system documentation files, the contribution/challenges file, and the video guide. See [`docs/FINAL-SUBMISSION-CHECKLIST.md`](docs/FINAL-SUBMISSION-CHECKLIST.md) before submitting.

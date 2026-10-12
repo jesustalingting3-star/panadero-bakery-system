@@ -67,4 +67,4 @@ New databases start with **0 stock** per catalog product. Staff/Admin must enter
 - If port 3000 is busy, stop the earlier PANADERO Node.js terminal with Ctrl+C and relaunch. The BAT deliberately does not kill or reuse an unrelated process.
 - Keep the server terminal open while using the portals.
 
-All active portal files are under `PANADERO-COSTUMER`, `PANADERO-STAFF`, and `PANADERO-ADMIN`. The old duplicate `apps/` prototype and role ZIP archives are not part of the organized repository.
+All active portal files are under `PANADERO-COSTUMER`, `PANADERO-STAFF`, and `PANADERO-ADMIN`. Existing legacy PDFs and database backups were preserved under `docs/archive/`; they were organized, not deleted. Current editable submission files are under `docs/submission/`.
