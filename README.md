@@ -53,6 +53,12 @@ Set the MySQL credentials in `.env`. Never commit `.env` because it contains the
 
 The server performs a safe startup migration for compatibility and seeds the initial categories, products, and demo staff/admin accounts when the database is empty.
 
+## CCS110 Submission PDFs
+
+- [System Overview and Requirements](02_Documentation/System_Overview_and_Requirements.pdf)
+- [System Features Documentation](02_Documentation/System_Features_Documentation.pdf)
+- [Database Design and SQL Queries](02_Documentation/Database_Design_and_SQL_Queries.pdf)
+
 ## Repository organization
 
 ```text
